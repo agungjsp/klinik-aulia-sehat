@@ -23,7 +23,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Skip 401 handling for login endpoint - let the mutation handle it
+    const isLoginRequest = error.config?.url?.includes("/auth/login")
+
+    if (error.response?.status === 401 && !isLoginRequest) {
       useAuthStore.getState().logout()
       window.location.href = "/login"
     }

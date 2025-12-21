@@ -367,14 +367,14 @@ function UsersPage() {
                 control={control}
                 render={({ field }) => (
                   <Select
-                    value={field.value?.toString() || ""}
-                    onValueChange={(v) => field.onChange(v ? Number(v) : null)}
+                    value={field.value?.toString() || "none"}
+                    onValueChange={(v) => field.onChange(v === "none" ? null : Number(v))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih poli" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tidak ada</SelectItem>
+                      <SelectItem value="none">Tidak ada</SelectItem>
                       {polies.map((poly) => (
                         <SelectItem key={poly.id} value={poly.id.toString()}>
                           {poly.name}
