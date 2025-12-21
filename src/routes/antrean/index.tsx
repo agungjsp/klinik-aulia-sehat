@@ -4,9 +4,9 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { format, parse } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { Plus, UserCheck, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal } from "lucide-react"
+import { Plus, UserCheck, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal, CalendarIcon } from "lucide-react"
 import { useQueueList, useQueueCreate, useQueueUpdateStatus, useQueueDelete, usePolyList, useScheduleList } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -44,11 +47,12 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>
 
 const statusConfig: Record<QueueStatus, { label: string; color: string; bgColor: string }> = {
-  registered: { label: "Terdaftar", color: "text-red-700", bgColor: "bg-red-100" },
-  arrived: { label: "Sudah Datang", color: "text-blue-700", bgColor: "bg-blue-100" },
-  serving: { label: "Dilayani", color: "text-yellow-700", bgColor: "bg-yellow-100" },
-  done: { label: "Selesai", color: "text-green-700", bgColor: "bg-green-100" },
-  no_show: { label: "Tidak Hadir", color: "text-gray-700", bgColor: "bg-gray-200" },
+  ARRIVED: { label: "Daftar Ulang", color: "text-blue-700", bgColor: "bg-blue-100" },
+  WAITING: { label: "Menunggu", color: "text-orange-700", bgColor: "bg-orange-100" },
+  IN_SERVICE: { label: "Dilayani", color: "text-yellow-700", bgColor: "bg-yellow-100" },
+  DONE: { label: "Selesai", color: "text-green-700", bgColor: "bg-green-100" },
+  NO_SHOW: { label: "Tidak Hadir", color: "text-gray-700", bgColor: "bg-gray-200" },
+  CANCELLED: { label: "Dibatalkan", color: "text-red-700", bgColor: "bg-red-100" },
 }
 
 function StatusBadge({ status }: { status: QueueStatus }) {
@@ -90,11 +94,11 @@ function AntreanPage() {
   // Group queues by status for summary
   const summary = {
     total: queues.length,
-    registered: queues.filter(q => q.status === "registered").length,
-    arrived: queues.filter(q => q.status === "arrived").length,
-    serving: queues.filter(q => q.status === "serving").length,
-    done: queues.filter(q => q.status === "done").length,
-    no_show: queues.filter(q => q.status === "no_show").length,
+    arrived: queues.filter(q => q.status === "ARRIVED").length,
+    waiting: queues.filter(q => q.status === "WAITING").length,
+    in_service: queues.filter(q => q.status === "IN_SERVICE").length,
+    done: queues.filter(q => q.status === "DONE").length,
+    no_show: queues.filter(q => q.status === "NO_SHOW").length,
   }
 
   const openRegisterForm = () => {
@@ -134,19 +138,19 @@ function AntreanPage() {
 
   const getNextActions = (queue: Queue) => {
     switch (queue.status) {
-      case "registered":
+      case "ARRIVED":
         return [
-          { label: "Datang", icon: UserCheck, status: "arrived" as QueueStatus, variant: "default" as const },
-          { label: "No Show", icon: XCircle, status: "no_show" as QueueStatus, variant: "outline" as const },
+          { label: "Siap Antre", icon: UserCheck, status: "WAITING" as QueueStatus, variant: "default" as const },
+          { label: "No Show", icon: XCircle, status: "NO_SHOW" as QueueStatus, variant: "outline" as const },
         ]
-      case "arrived":
+      case "WAITING":
         return [
-          { label: "Panggil", icon: Play, status: "serving" as QueueStatus, variant: "default" as const },
-          { label: "No Show", icon: XCircle, status: "no_show" as QueueStatus, variant: "outline" as const },
+          { label: "Panggil", icon: Play, status: "IN_SERVICE" as QueueStatus, variant: "default" as const },
+          { label: "No Show", icon: XCircle, status: "NO_SHOW" as QueueStatus, variant: "outline" as const },
         ]
-      case "serving":
+      case "IN_SERVICE":
         return [
-          { label: "Selesai", icon: CheckCircle, status: "done" as QueueStatus, variant: "default" as const },
+          { label: "Selesai", icon: CheckCircle, status: "DONE" as QueueStatus, variant: "default" as const },
         ]
       default:
         return []
@@ -175,18 +179,34 @@ function AntreanPage() {
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Label>Tanggal:</Label>
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-auto"
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[240px] justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(parse(selectedDate, "yyyy-MM-dd", new Date()), "d MMMM yyyy", { locale: localeId }) : <span>Pilih tanggal</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={parse(selectedDate, "yyyy-MM-dd", new Date())}
+                onSelect={(date) => date && setSelectedDate(format(date, "yyyy-MM-dd"))}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">Total: {summary.total}</Badge>
-          <Badge className="bg-red-100 text-red-700">Terdaftar: {summary.registered}</Badge>
-          <Badge className="bg-blue-100 text-blue-700">Datang: {summary.arrived}</Badge>
-          <Badge className="bg-yellow-100 text-yellow-700">Dilayani: {summary.serving}</Badge>
+          <Badge className="bg-blue-100 text-blue-700">Daftar Ulang: {summary.arrived}</Badge>
+          <Badge className="bg-orange-100 text-orange-700">Menunggu: {summary.waiting}</Badge>
+          <Badge className="bg-yellow-100 text-yellow-700">Dilayani: {summary.in_service}</Badge>
           <Badge className="bg-green-100 text-green-700">Selesai: {summary.done}</Badge>
           <Badge className="bg-gray-200 text-gray-700">No Show: {summary.no_show}</Badge>
         </div>
@@ -224,7 +244,7 @@ function AntreanPage() {
             <div
               key={queue.id}
               className={`grid grid-cols-[80px_1fr_150px_120px_100px_100px_150px] gap-4 border-b p-3 items-center ${
-                queue.status === "serving" ? "bg-yellow-50" : ""
+                queue.status === "IN_SERVICE" ? "bg-yellow-50" : ""
               }`}
             >
               <div className="font-mono font-bold text-lg">{queue.queue_number}</div>
@@ -242,7 +262,7 @@ function AntreanPage() {
               <div className="flex justify-end gap-1">
                 {(() => {
                   const actions = getNextActions(queue)
-                  const showDelete = queue.status === "registered" || queue.status === "arrived"
+                  const showDelete = queue.status === "ARRIVED" || queue.status === "WAITING"
                   
                   if (actions.length + (showDelete ? 1 : 0) > 1) {
                     return (

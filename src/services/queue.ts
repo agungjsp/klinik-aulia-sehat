@@ -18,11 +18,11 @@ const mockDoctor = { id: 3, name: "dr. Harris Aulia", username: "harris", email:
 const mockSchedule = { id: 1, doctor_id: 3, date: format(new Date(), "yyyy-MM-dd"), start_time: "08:00:00", end_time: "12:00:00", created_at: "", updated_at: "", deleted_at: null, doctor: mockDoctor }
 
 let mockQueues: Queue[] = [
-  { id: 1, queue_number: "A001", patient_id: 1, patient: mockPatients[0], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "done", registration_time: "07:30:00", arrival_time: "07:45:00", serving_time: "08:05:00", done_time: "08:20:00", queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "serving", registration_time: "07:35:00", arrival_time: "07:50:00", serving_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "arrived", registration_time: "07:40:00", arrival_time: "08:00:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 4, queue_number: "A004", patient_id: 4, patient: mockPatients[3], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "arrived", registration_time: "07:45:00", arrival_time: "08:10:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "registered", registration_time: "07:50:00", arrival_time: null, serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 1, queue_number: "A001", patient_id: 1, patient: mockPatients[0], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "DONE", registration_time: "07:30:00", arrival_time: "07:45:00", serving_time: "08:05:00", done_time: "08:20:00", queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "IN_SERVICE", registration_time: "07:35:00", arrival_time: "07:50:00", serving_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:40:00", arrival_time: "08:00:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 4, queue_number: "A004", patient_id: 4, patient: mockPatients[3], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:45:00", arrival_time: "08:10:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "ARRIVED", registration_time: "07:50:00", arrival_time: null, serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
 ]
 
 let nextId = 6
@@ -39,10 +39,12 @@ export const queueService = {
       if (params?.poly_id) filtered = filtered.filter(q => q.poly_id === params.poly_id)
       if (params?.doctor_id) filtered = filtered.filter(q => q.doctor_id === params.doctor_id)
       if (params?.status) filtered = filtered.filter(q => q.status === params.status)
-      // Sort by arrival_time (arrived first), then registration_time
+      // Sort by status priority then arrival_time
       filtered.sort((a, b) => {
-        if (a.status === "serving") return -1
-        if (b.status === "serving") return 1
+        const statusOrder: Record<string, number> = { IN_SERVICE: 0, WAITING: 1, ARRIVED: 2, DONE: 3, NO_SHOW: 4, CANCELLED: 5 }
+        if (statusOrder[a.status] !== statusOrder[b.status]) {
+          return statusOrder[a.status] - statusOrder[b.status]
+        }
         if (a.arrival_time && b.arrival_time) return a.arrival_time.localeCompare(b.arrival_time)
         if (a.arrival_time) return -1
         if (b.arrival_time) return 1
@@ -88,7 +90,7 @@ export const queueService = {
         doctor: mockDoctor,
         schedule_id: data.schedule_id,
         schedule: mockSchedule,
-        status: "registered",
+        status: "ARRIVED",
         registration_time: format(new Date(), "HH:mm:ss"),
         arrival_time: null,
         serving_time: null,
@@ -114,9 +116,9 @@ export const queueService = {
       mockQueues[idx] = { 
         ...mockQueues[idx], 
         status: data.status,
-        arrival_time: data.status === "arrived" ? now : mockQueues[idx].arrival_time,
-        serving_time: data.status === "serving" ? now : mockQueues[idx].serving_time,
-        done_time: (data.status === "done" || data.status === "no_show") ? now : mockQueues[idx].done_time,
+        arrival_time: data.status === "WAITING" && !mockQueues[idx].arrival_time ? now : mockQueues[idx].arrival_time,
+        serving_time: data.status === "IN_SERVICE" ? now : mockQueues[idx].serving_time,
+        done_time: (data.status === "DONE" || data.status === "NO_SHOW") ? now : mockQueues[idx].done_time,
         updated_at: new Date().toISOString(),
       }
       return { status: "success", data: mockQueues[idx], message: "Status berhasil diupdate" }

@@ -79,7 +79,7 @@ export interface ScheduleRequest {
 
 
 // Queue/Antrean Types
-export type QueueStatus = "registered" | "arrived" | "serving" | "done" | "no_show"
+export type QueueStatus = "ARRIVED" | "WAITING" | "IN_SERVICE" | "DONE" | "NO_SHOW" | "CANCELLED"
 
 export interface Patient {
   id: number
