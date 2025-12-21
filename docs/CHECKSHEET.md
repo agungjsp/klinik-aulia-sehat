@@ -37,7 +37,7 @@
 | [M4 - Follow-up No-Show](#m4---follow-up-no-show) | 0/12 | 🔴 Not Started |
 | [M5 - Display Antrean Klinik (TV)](#m5---display-antrean-klinik-tv) | 0/10 | 🔴 Not Started |
 | [M6 - Reporting & Analytics](#m6---reporting--analytics) | 0/14 | 🔴 Not Started |
-| [M7 - Master Data](#m7---master-data) | 28/36 | 🟡 In Progress |
+| [M7 - Master Data](#m7---master-data) | 36/36 | ✅ Complete |
 | [M8 - Pengguna & Sistem](#m8---pengguna--sistem) | 13/18 | 🟡 In Progress |
 
 ---
@@ -338,27 +338,27 @@
 ### 7.3 CRUD Data Users (Dokter, Admin, CS)
 
 #### UI Components
-- [ ] Buat page `/master/users`
-- [ ] DataTable dengan kolom: ID, Nama, Username, Email, Role, Poli, Aksi
-- [ ] Search by nama/username/email
-- [ ] Pagination (server-side)
-- [ ] Tab: Active | Trashed
+- [x] Buat page `/master/users`
+- [x] DataTable dengan kolom: ID, Nama, Username, Email, Role, Poli, Aksi
+- [x] Search by nama/username/email
+- [x] Pagination (server-side)
+- [x] Tab: Active | Trashed
 
 #### Form
-- [ ] Modal form tambah user
+- [x] Modal form tambah user
   - Fields: name, username, email, password, password_confirmation, roles[], poly_id
-- [ ] Modal form edit user (password optional)
-- [ ] Confirm dialog hapus
+- [x] Modal form edit user (password optional)
+- [x] Confirm dialog hapus
 
 #### API Integration
-- [ ] `GET /api/users` - List users (paginated)
-- [ ] `GET /api/users?search=&page=&per_page=` - Search & pagination
-- [ ] `GET /api/users/{id}` - Detail user
-- [ ] `POST /api/users` - Tambah user
-- [ ] `PUT /api/users/{id}` - Update user
-- [ ] `DELETE /api/users/{id}` - Hapus user (soft delete)
-- [ ] `GET /api/users/trashed` - List users terhapus
-- [ ] `POST /api/users/{id}/restore` - Restore user
+- [x] `GET /api/users` - List users (paginated)
+- [x] `GET /api/users?search=&page=&per_page=` - Search & pagination
+- [x] `GET /api/users/{id}` - Detail user
+- [x] `POST /api/users` - Tambah user
+- [x] `PUT /api/users/{id}` - Update user
+- [x] `DELETE /api/users/{id}` - Hapus user (soft delete)
+- [x] `GET /api/users/trashed` - List users terhapus
+- [x] `POST /api/users/{id}/restore` - Restore user
 
 ### 7.4 CRUD Data Pasien
 

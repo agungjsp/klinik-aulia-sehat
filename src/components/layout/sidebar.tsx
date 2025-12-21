@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router"
-import { Home, LogOut, Database } from "lucide-react"
+import { Home, LogOut, Database, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/stores"
@@ -10,8 +10,9 @@ const menuItems = [
 ] as const
 
 const masterDataItems = [
-  { to: "/master/poli", icon: Database, label: "Poli" },
+  { to: "/master/users", icon: Users, label: "Users" },
   { to: "/master/roles", icon: Database, label: "Roles" },
+  { to: "/master/poli", icon: Database, label: "Poli" },
 ] as const
 
 export function Sidebar() {
