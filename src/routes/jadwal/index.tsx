@@ -269,7 +269,7 @@ function JadwalPage() {
       )}
 
       {/* Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen} modal={false}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingSchedule ? "Edit Jadwal" : "Tambah Jadwal"}</DialogTitle>
@@ -288,7 +288,7 @@ function JadwalPage() {
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={isLoadingUsers ? "Memuat..." : "Pilih dokter"} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       {doctors.map((doc) => (
                         <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>
                       ))}
