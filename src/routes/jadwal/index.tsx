@@ -54,9 +54,12 @@ function JadwalPage() {
   const { data: usersData, isLoading: isLoadingUsers } = useUserList({ per_page: 1000 })
   const allUsers = usersData?.data || []
   
-  // Filter users yang memiliki role "Dokter" (case insensitive)
+  // Filter users yang memiliki role "Dokter" atau "Doctor" (case insensitive)
   const filteredDoctors = allUsers.filter((u) => 
-    u.roles.some((r) => r.name.toLowerCase() === "dokter")
+    u.roles?.some((r) => {
+      const roleName = r.name?.toLowerCase() || ""
+      return roleName === "dokter" || roleName === "doctor"
+    })
   )
 
   // Untuk edit: pastikan dokter dari schedule ada di list
@@ -289,11 +292,14 @@ function JadwalPage() {
                       <SelectValue placeholder={isLoadingUsers ? "Memuat..." : "Pilih dokter"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {doctors.map((doc) => (
-                        <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>
-                      ))}
-                      {!isLoadingUsers && doctors.length === 0 && (
-                        <div className="px-2 py-1.5 text-sm text-muted-foreground">Tidak ada dokter</div>
+                      {isLoadingUsers ? (
+                        <SelectItem value="__loading" disabled>Memuat data...</SelectItem>
+                      ) : doctors.length === 0 ? (
+                        <SelectItem value="__empty" disabled>Tidak ada dokter</SelectItem>
+                      ) : (
+                        doctors.map((doc) => (
+                          <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>
+                        ))
                       )}
                     </SelectContent>
                   </Select>
