@@ -282,21 +282,18 @@ function JadwalPage() {
                 control={control}
                 render={({ field }) => (
                   <Select
-                    value={field.value ? String(field.value) : ""}
-                    onValueChange={(v) => field.onChange(v ? Number(v) : undefined)}
+                    value={field.value ? String(field.value) : undefined}
+                    onValueChange={(v) => field.onChange(Number(v))}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={isLoadingUsers ? "Memuat..." : "Pilih dokter"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {isLoadingUsers ? (
-                        <SelectItem value="loading" disabled>Memuat data...</SelectItem>
-                      ) : doctors.length === 0 ? (
-                        <SelectItem value="empty" disabled>Tidak ada dokter</SelectItem>
-                      ) : (
-                        doctors.map((doc) => (
-                          <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>
-                        ))
+                      {doctors.map((doc) => (
+                        <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>
+                      ))}
+                      {!isLoadingUsers && doctors.length === 0 && (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">Tidak ada dokter</div>
                       )}
                     </SelectContent>
                   </Select>
