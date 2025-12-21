@@ -76,3 +76,56 @@ export interface ScheduleRequest {
   start_time: string
   end_time: string
 }
+
+
+// Queue/Antrean Types
+export type QueueStatus = "registered" | "arrived" | "serving" | "done" | "no_show"
+
+export interface Patient {
+  id: number
+  name: string
+  nik: string
+  phone: string
+  birth_date: string
+  address?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Queue {
+  id: number
+  queue_number: string
+  patient_id: number
+  patient: Patient
+  poly_id: number
+  poly: Poly
+  doctor_id: number
+  doctor: User
+  schedule_id: number
+  schedule: Schedule
+  status: QueueStatus
+  registration_time: string
+  arrival_time: string | null
+  serving_time: string | null
+  done_time: string | null
+  queue_date: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface QueueCreateRequest {
+  patient_id?: number
+  patient_name: string
+  patient_nik: string
+  patient_phone: string
+  poly_id: number
+  doctor_id: number
+  schedule_id: number
+  queue_date: string
+  notes?: string
+}
+
+export interface QueueUpdateStatusRequest {
+  status: QueueStatus
+}

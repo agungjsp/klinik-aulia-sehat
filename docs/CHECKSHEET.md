@@ -32,7 +32,7 @@
 |-------|----------|--------|
 | [M0 - Setup & Foundation](#m0---setup--foundation) | 15/15 | ✅ Complete |
 | [M1 - Jadwal Dokter & Kuota](#m1---jadwal-dokter--kuota) | 12/12 | ✅ Complete |
-| [M2 - Antrean & Kedatangan](#m2---antrean--kedatangan) | 0/20 | 🔴 Not Started |
+| [M2 - Antrean & Kedatangan](#m2---antrean--kedatangan) | 14/20 | 🟡 In Progress |
 | [M3 - Pengingat (Reminder)](#m3---pengingat-reminder) | 0/14 | 🔴 Not Started |
 | [M4 - Follow-up No-Show](#m4---follow-up-no-show) | 0/12 | 🔴 Not Started |
 | [M5 - Display Antrean Klinik (TV)](#m5---display-antrean-klinik-tv) | 0/10 | 🔴 Not Started |
@@ -107,36 +107,38 @@
 
 ## M2 - Antrean & Kedatangan
 
-> **API Endpoint:** TBD (belum ada di dokumentasi)
+> **API Endpoint:** TBD (menggunakan mock data)
 > **Priority:** High
 
 ### 2.1 Halaman Pendaftaran & Antrean (Admin)
 
 #### UI Components
-- [ ] Buat page `/antrean`
-- [ ] Buat DataTable antrean harian (TanStack Table)
-- [ ] Kolom: No. Antrean, Nama Pasien, Dokter, Poli, Jam Daftar, Status, Aksi
-- [ ] Filter: Tanggal, Dokter, Poli, Status
-- [ ] Search by nama pasien
+- [x] Buat page `/antrean`
+- [x] Buat list antrean harian dengan grid layout
+- [x] Kolom: No. Antrean, Nama Pasien, Poli/Dokter, Jam Daftar, Jam Datang, Status, Aksi
+- [x] Filter: Tanggal
+- [ ] Filter: Dokter, Poli, Status (TODO)
+- [ ] Search by nama pasien (TODO)
 
 #### Status Badge dengan Warna
-- [ ] 🔴 Merah: Terdaftar (belum datang)
-- [ ] 🔵 Biru: Sudah datang (siap dipanggil)
-- [ ] 🟡 Kuning: Sedang dilayani
-- [ ] 🟢 Hijau: Selesai
-- [ ] ⚫ Abu-abu: Tidak hadir (no-show)
+- [x] 🔴 Merah: Terdaftar (belum datang)
+- [x] 🔵 Biru: Sudah datang (siap dipanggil)
+- [x] 🟡 Kuning: Sedang dilayani
+- [x] 🟢 Hijau: Selesai
+- [x] ⚫ Abu-abu: Tidak hadir (no-show)
 
 #### Form Pendaftaran
-- [ ] Buat form daftar antrean baru
-- [ ] Autocomplete/search pasien existing
-- [ ] Pilih dokter & poli
-- [ ] Set jam kedatangan
+- [x] Buat form daftar antrean baru
+- [ ] Autocomplete/search pasien existing (TODO)
+- [x] Pilih poli & jadwal dokter
+- [x] Input data pasien (nama, NIK, HP)
 
 #### Actions
-- [ ] Button update status antrean
-- [ ] Button panggil pasien (trigger ke display TV)
-- [ ] Button tandai selesai
-- [ ] Button tandai no-show
+- [x] Button update status antrean (Datang, Panggil, Selesai, No Show)
+- [ ] Button panggil pasien (trigger ke display TV) - TODO
+- [x] Button tandai selesai
+- [x] Button tandai no-show
+- [x] Button hapus antrean
 
 ### 2.2 Dashboard Antrean untuk Dokter
 
