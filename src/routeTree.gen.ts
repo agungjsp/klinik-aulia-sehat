@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MasterUsersRouteImport } from './routes/master/users'
+import { Route as MasterRolesRouteImport } from './routes/master/roles'
+import { Route as MasterPoliRouteImport } from './routes/master/poli'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -28,35 +31,75 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MasterUsersRoute = MasterUsersRouteImport.update({
+  id: '/master/users',
+  path: '/master/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterRolesRoute = MasterRolesRouteImport.update({
+  id: '/master/roles',
+  path: '/master/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterPoliRoute = MasterPoliRouteImport.update({
+  id: '/master/poli',
+  path: '/master/poli',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/login': typeof LoginRoute
+  '/master/poli': typeof MasterPoliRoute
+  '/master/roles': typeof MasterRolesRoute
+  '/master/users': typeof MasterUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/login': typeof LoginRoute
+  '/master/poli': typeof MasterPoliRoute
+  '/master/roles': typeof MasterRolesRoute
+  '/master/users': typeof MasterUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/login': typeof LoginRoute
+  '/master/poli': typeof MasterPoliRoute
+  '/master/roles': typeof MasterRolesRoute
+  '/master/users': typeof MasterUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$' | '/login'
+  fullPaths:
+    | '/'
+    | '/$'
+    | '/login'
+    | '/master/poli'
+    | '/master/roles'
+    | '/master/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$' | '/login'
-  id: '__root__' | '/' | '/$' | '/login'
+  to: '/' | '/$' | '/login' | '/master/poli' | '/master/roles' | '/master/users'
+  id:
+    | '__root__'
+    | '/'
+    | '/$'
+    | '/login'
+    | '/master/poli'
+    | '/master/roles'
+    | '/master/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   LoginRoute: typeof LoginRoute
+  MasterPoliRoute: typeof MasterPoliRoute
+  MasterRolesRoute: typeof MasterRolesRoute
+  MasterUsersRoute: typeof MasterUsersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +125,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/master/users': {
+      id: '/master/users'
+      path: '/master/users'
+      fullPath: '/master/users'
+      preLoaderRoute: typeof MasterUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/roles': {
+      id: '/master/roles'
+      path: '/master/roles'
+      fullPath: '/master/roles'
+      preLoaderRoute: typeof MasterRolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/poli': {
+      id: '/master/poli'
+      path: '/master/poli'
+      fullPath: '/master/poli'
+      preLoaderRoute: typeof MasterPoliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +153,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   LoginRoute: LoginRoute,
+  MasterPoliRoute: MasterPoliRoute,
+  MasterRolesRoute: MasterRolesRoute,
+  MasterUsersRoute: MasterUsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

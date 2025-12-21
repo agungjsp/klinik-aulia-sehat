@@ -12,7 +12,7 @@ export const Route = createRootRoute({
       location.pathname.startsWith(path)
     )
 
-    if (!isAuthenticated && !isPublicPath && location.pathname !== "/") {
+    if (!isAuthenticated && !isPublicPath) {
       throw redirect({ to: "/login" })
     }
   },

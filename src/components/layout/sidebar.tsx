@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router"
-import { Home, LogOut } from "lucide-react"
+import { Home, LogOut, Database, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/stores"
@@ -7,6 +7,12 @@ import { authService } from "@/services"
 
 const menuItems = [
   { to: "/", icon: Home, label: "Dashboard" },
+] as const
+
+const masterDataItems = [
+  { to: "/master/users", icon: Users, label: "Users" },
+  { to: "/master/roles", icon: Database, label: "Roles" },
+  { to: "/master/poli", icon: Database, label: "Poli" },
 ] as const
 
 export function Sidebar() {
@@ -42,6 +48,25 @@ export function Sidebar() {
             {item.label}
           </Link>
         ))}
+
+        <div className="pt-4">
+          <p className="mb-2 px-3 text-xs font-medium text-muted-foreground">
+            Master Data
+          </p>
+          {masterDataItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent",
+                "[&.active]:bg-accent [&.active]:font-medium"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
       </nav>
 
       <div className="border-t p-4">
