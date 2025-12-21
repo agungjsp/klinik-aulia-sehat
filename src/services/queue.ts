@@ -19,8 +19,8 @@ const mockSchedule = { id: 1, doctor_id: 3, date: format(new Date(), "yyyy-MM-dd
 
 let mockQueues: Queue[] = [
   { id: 1, queue_number: "A001", patient_id: 1, patient: mockPatients[0], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "DONE", registration_time: "07:30:00", arrival_time: "07:45:00", serving_time: "08:05:00", done_time: "08:20:00", queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "IN_SERVICE", registration_time: "07:35:00", arrival_time: "07:50:00", serving_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:40:00", arrival_time: "08:00:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WITH_DOCTOR", registration_time: "07:35:00", arrival_time: "07:50:00", serving_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "ANAMNESA", registration_time: "07:40:00", arrival_time: "08:00:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
   { id: 4, queue_number: "A004", patient_id: 4, patient: mockPatients[3], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:45:00", arrival_time: "08:10:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
   { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:50:00", arrival_time: "08:15:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
 ]
@@ -41,7 +41,7 @@ export const queueService = {
       if (params?.status) filtered = filtered.filter(q => q.status === params.status)
       // Sort by status priority then arrival_time
       filtered.sort((a, b) => {
-        const statusOrder: Record<string, number> = { IN_SERVICE: 0, WAITING: 1, DONE: 2, NO_SHOW: 3, CANCELLED: 4 }
+        const statusOrder: Record<string, number> = { WITH_DOCTOR: 0, ANAMNESA: 1, WAITING: 2, DONE: 3, NO_SHOW: 4, CANCELLED: 5 }
         if (statusOrder[a.status] !== statusOrder[b.status]) {
           return statusOrder[a.status] - statusOrder[b.status]
         }
@@ -116,7 +116,7 @@ export const queueService = {
       mockQueues[idx] = { 
         ...mockQueues[idx], 
         status: data.status,
-        serving_time: data.status === "IN_SERVICE" ? now : mockQueues[idx].serving_time,
+        serving_time: (data.status === "ANAMNESA" || data.status === "WITH_DOCTOR") && !mockQueues[idx].serving_time ? now : mockQueues[idx].serving_time,
         done_time: (data.status === "DONE" || data.status === "NO_SHOW") ? now : mockQueues[idx].done_time,
         updated_at: new Date().toISOString(),
       }
