@@ -1,4 +1,4 @@
-import { Outlet, createRootRoute, redirect } from "@tanstack/react-router"
+import { Outlet, createRootRoute, redirect, useLocation } from "@tanstack/react-router"
 import { useAuthStore } from "@/stores"
 import { AppLayout } from "@/components/layout"
 import { Toaster } from "@/components/ui/sonner"
@@ -20,7 +20,8 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  const { isAuthenticated } = useAuthStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const location = useLocation()
   const isPublicPath = publicPaths.some((path) =>
     location.pathname.startsWith(path)
   )
