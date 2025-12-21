@@ -51,8 +51,21 @@ function JadwalPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
-  const { data: usersData } = useUserList()
-  const doctors = usersData?.data?.filter((u) => u.roles.some((r) => r.name.toLowerCase() === "dokter")) || []
+  const { data: usersData, isLoading: isLoadingUsers } = useUserList({ per_page: 1000 })
+  const allUsers = usersData?.data || []
+  
+  // Filter users yang memiliki role mengandung kata "dokter" (case insensitive)
+  // atau memiliki poly_id (dokter biasanya terkait dengan poli)
+  const filteredDoctors = allUsers.filter((u) => 
+    u.roles.some((r) => r.name.toLowerCase().includes("dokter")) || u.poly_id !== null
+  )
+
+  // Fallback: jika tidak ada dokter terfilter, tampilkan semua users
+  // Untuk edit: pastikan dokter dari schedule ada di list
+  let doctors = filteredDoctors.length > 0 ? filteredDoctors : allUsers
+  if (editingSchedule?.doctor && !doctors.some(d => d.id === editingSchedule.doctor_id)) {
+    doctors = [...doctors, editingSchedule.doctor as any]
+  }
 
   const { data: scheduleData, isLoading } = useScheduleList({
     month: currentMonth.getMonth() + 1,
@@ -271,16 +284,22 @@ function JadwalPage() {
                 control={control}
                 render={({ field }) => (
                   <Select
-                    value={field.value?.toString() || ""}
-                    onValueChange={(v) => field.onChange(Number(v))}
+                    value={field.value ? String(field.value) : ""}
+                    onValueChange={(v) => field.onChange(v ? Number(v) : undefined)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih dokter" />
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={isLoadingUsers ? "Memuat..." : "Pilih dokter"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {doctors.map((doc) => (
-                        <SelectItem key={doc.id} value={doc.id.toString()}>{doc.name}</SelectItem>
-                      ))}
+                      {isLoadingUsers ? (
+                        <SelectItem value="loading" disabled>Memuat data...</SelectItem>
+                      ) : doctors.length === 0 ? (
+                        <SelectItem value="empty" disabled>Tidak ada dokter</SelectItem>
+                      ) : (
+                        doctors.map((doc) => (
+                          <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
