@@ -54,15 +54,13 @@ function JadwalPage() {
   const { data: usersData, isLoading: isLoadingUsers } = useUserList({ per_page: 1000 })
   const allUsers = usersData?.data || []
   
-  // Filter users yang memiliki role mengandung kata "dokter" (case insensitive)
-  // atau memiliki poly_id (dokter biasanya terkait dengan poli)
+  // Filter users yang memiliki role "Dokter" (case insensitive)
   const filteredDoctors = allUsers.filter((u) => 
-    u.roles.some((r) => r.name.toLowerCase().includes("dokter")) || u.poly_id !== null
+    u.roles.some((r) => r.name.toLowerCase() === "dokter")
   )
 
-  // Fallback: jika tidak ada dokter terfilter, tampilkan semua users
   // Untuk edit: pastikan dokter dari schedule ada di list
-  let doctors = filteredDoctors.length > 0 ? filteredDoctors : allUsers
+  let doctors = filteredDoctors
   if (editingSchedule?.doctor && !doctors.some(d => d.id === editingSchedule.doctor_id)) {
     doctors = [...doctors, editingSchedule.doctor as any]
   }
