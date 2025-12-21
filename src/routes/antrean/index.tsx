@@ -6,12 +6,20 @@ import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { Plus, UserCheck, Play, CheckCircle, XCircle, Trash2, RefreshCw } from "lucide-react"
+import { Plus, UserCheck, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal } from "lucide-react"
 import { useQueueList, useQueueCreate, useQueueUpdateStatus, useQueueDelete, usePolyList, useScheduleList } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -56,7 +64,11 @@ function AntreanPage() {
 
   const { data: queueData, isLoading, refetch } = useQueueList({ date: selectedDate })
   const { data: polyData } = usePolyList()
-  const { data: scheduleData } = useScheduleList({ date: selectedDate })
+  // Fetch schedules for current month (not filtered by exact date) to get available doctors
+  const { data: scheduleData } = useScheduleList({ 
+    month: new Date(selectedDate).getMonth() + 1,
+    year: new Date(selectedDate).getFullYear()
+  })
 
   const createMutation = useQueueCreate()
   const updateStatusMutation = useQueueUpdateStatus()
@@ -228,23 +240,70 @@ function AntreanPage() {
               <div className="text-sm">{queue.arrival_time?.slice(0, 5) || "-"}</div>
               <div><StatusBadge status={queue.status} /></div>
               <div className="flex justify-end gap-1">
-                {getNextActions(queue).map((action) => (
-                  <Button
-                    key={action.status}
-                    variant={action.variant}
-                    size="sm"
-                    onClick={() => handleUpdateStatus(queue, action.status)}
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    <action.icon className="h-3 w-3 mr-1" />
-                    {action.label}
-                  </Button>
-                ))}
-                {(queue.status === "registered" || queue.status === "arrived") && (
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteId(queue.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                )}
+                {(() => {
+                  const actions = getNextActions(queue)
+                  const showDelete = queue.status === "registered" || queue.status === "arrived"
+                  
+                  if (actions.length + (showDelete ? 1 : 0) > 1) {
+                    return (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Aksi</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                          {actions.map((action) => (
+                            <DropdownMenuItem
+                              key={action.status}
+                              onClick={() => handleUpdateStatus(queue, action.status)}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <action.icon className="mr-2 h-4 w-4" />
+                              {action.label}
+                            </DropdownMenuItem>
+                          ))}
+                          {showDelete && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setDeleteId(queue.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )
+                  }
+
+                  return (
+                    <>
+                      {actions.map((action) => (
+                        <Button
+                          key={action.status}
+                          variant={action.variant}
+                          size="sm"
+                          onClick={() => handleUpdateStatus(queue, action.status)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <action.icon className="h-3 w-3 mr-1" />
+                          {action.label}
+                        </Button>
+                      ))}
+                      {showDelete && (
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(queue.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             </div>
           ))
