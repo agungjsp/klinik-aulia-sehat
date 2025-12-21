@@ -11,6 +11,7 @@ const menuItems = [
 
 const masterDataItems = [
   { to: "/master/poli", icon: Database, label: "Poli" },
+  { to: "/master/roles", icon: Database, label: "Roles" },
 ] as const
 
 export function Sidebar() {

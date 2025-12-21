@@ -37,7 +37,7 @@
 | [M4 - Follow-up No-Show](#m4---follow-up-no-show) | 0/12 | 🔴 Not Started |
 | [M5 - Display Antrean Klinik (TV)](#m5---display-antrean-klinik-tv) | 0/10 | 🔴 Not Started |
 | [M6 - Reporting & Analytics](#m6---reporting--analytics) | 0/14 | 🔴 Not Started |
-| [M7 - Master Data](#m7---master-data) | 14/36 | 🟡 In Progress |
+| [M7 - Master Data](#m7---master-data) | 28/36 | 🟡 In Progress |
 | [M8 - Pengguna & Sistem](#m8---pengguna--sistem) | 13/18 | 🟡 In Progress |
 
 ---
@@ -316,24 +316,24 @@
 ### 7.2 CRUD Data Roles
 
 #### UI Components
-- [ ] Buat page `/master/roles`
-- [ ] DataTable dengan kolom: ID, Nama, Created At, Aksi
-- [ ] Search by nama
-- [ ] Tab: Active | Trashed
+- [x] Buat page `/master/roles`
+- [x] DataTable dengan kolom: ID, Nama, Created At, Aksi
+- [x] Search by nama
+- [x] Tab: Active | Trashed
 
 #### Form
-- [ ] Modal form tambah role
-- [ ] Modal form edit role
-- [ ] Confirm dialog hapus
+- [x] Modal form tambah role
+- [x] Modal form edit role
+- [x] Confirm dialog hapus
 
 #### API Integration
-- [ ] `GET /api/roles` - List roles
-- [ ] `GET /api/roles?search=` - Search roles
-- [ ] `POST /api/roles` - Tambah role
-- [ ] `PUT /api/roles/{id}` - Update role
-- [ ] `DELETE /api/roles/{id}` - Hapus role (soft delete)
-- [ ] `GET /api/roles/trashed` - List roles terhapus
-- [ ] `POST /api/roles/{id}/restore` - Restore role
+- [x] `GET /api/roles` - List roles
+- [x] `GET /api/roles?search=` - Search roles
+- [x] `POST /api/roles` - Tambah role
+- [x] `PUT /api/roles/{id}` - Update role
+- [x] `DELETE /api/roles/{id}` - Hapus role (soft delete)
+- [x] `GET /api/roles/trashed` - List roles terhapus
+- [x] `POST /api/roles/{id}/restore` - Restore role
 
 ### 7.3 CRUD Data Users (Dokter, Admin, CS)
 
