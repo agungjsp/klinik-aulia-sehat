@@ -31,7 +31,7 @@
 | Modul | Progress | Status |
 |-------|----------|--------|
 | [M0 - Setup & Foundation](#m0---setup--foundation) | 15/15 | ✅ Complete |
-| [M1 - Jadwal Dokter & Kuota](#m1---jadwal-dokter--kuota) | 0/12 | 🔴 Not Started |
+| [M1 - Jadwal Dokter & Kuota](#m1---jadwal-dokter--kuota) | 12/12 | ✅ Complete |
 | [M2 - Antrean & Kedatangan](#m2---antrean--kedatangan) | 0/20 | 🔴 Not Started |
 | [M3 - Pengingat (Reminder)](#m3---pengingat-reminder) | 0/14 | 🔴 Not Started |
 | [M4 - Follow-up No-Show](#m4---follow-up-no-show) | 0/12 | 🔴 Not Started |
@@ -81,23 +81,23 @@
 ### 1.1 Halaman Kelola Jadwal Dokter
 
 #### UI Components
-- [ ] Buat page `/jadwal-dokter`
-- [ ] Buat calendar view untuk jadwal (monthly/weekly)
-- [ ] Buat list view jadwal per dokter
-- [ ] Buat filter (dokter, tanggal, bulan, tahun)
+- [x] Buat page `/jadwal`
+- [x] Buat calendar view untuk jadwal (monthly)
+- [x] Buat detail view jadwal per hari (klik tanggal)
+- [x] Buat filter (dokter, bulan, tahun)
 
 #### Form Jadwal
-- [ ] Buat form tambah jadwal (React Hook Form + Zod)
+- [x] Buat form tambah jadwal (React Hook Form + Zod)
   - Fields: `doctor_id`, `date`, `start_time`, `end_time`
-- [ ] Buat form edit jadwal
-- [ ] Validasi conflict jadwal (tampilkan error dari API)
+- [x] Buat form edit jadwal
+- [x] Validasi conflict jadwal (tampilkan error dari API)
 
 #### API Integration
-- [ ] `GET /api/schedule` - Query dengan TanStack Query
-- [ ] `GET /api/schedule/{id}` - Detail jadwal
-- [ ] `POST /api/schedule` - Tambah jadwal (mutation)
-- [ ] `PUT /api/schedule/{id}` - Update jadwal (mutation)
-- [ ] `DELETE /api/schedule/{id}` - Hapus jadwal (mutation)
+- [x] `GET /api/schedule` - Query dengan TanStack Query
+- [x] `GET /api/schedule/{id}` - Detail jadwal (via list)
+- [x] `POST /api/schedule` - Tambah jadwal (mutation)
+- [x] `PUT /api/schedule/{id}` - Update jadwal (mutation)
+- [x] `DELETE /api/schedule/{id}` - Hapus jadwal (mutation)
 
 #### UX
 - [ ] Invalidate query setelah create/update/delete

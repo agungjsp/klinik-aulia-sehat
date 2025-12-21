@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router"
-import { Home, LogOut, Database, Users } from "lucide-react"
+import { Home, LogOut, Database, Users, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/stores"
@@ -7,6 +7,7 @@ import { authService } from "@/services"
 
 const menuItems = [
   { to: "/", icon: Home, label: "Dashboard" },
+  { to: "/jadwal", icon: Calendar, label: "Jadwal Dokter" },
 ] as const
 
 const masterDataItems = [
