@@ -37,7 +37,7 @@
 | [M4 - Follow-up No-Show](#m4---follow-up-no-show) | 0/12 | 🔴 Not Started |
 | [M5 - Display Antrean Klinik (TV)](#m5---display-antrean-klinik-tv) | 0/10 | 🔴 Not Started |
 | [M6 - Reporting & Analytics](#m6---reporting--analytics) | 0/14 | 🔴 Not Started |
-| [M7 - Master Data](#m7---master-data) | 0/36 | 🔴 Not Started |
+| [M7 - Master Data](#m7---master-data) | 14/36 | 🟡 In Progress |
 | [M8 - Pengguna & Sistem](#m8---pengguna--sistem) | 13/18 | 🟡 In Progress |
 
 ---
@@ -294,24 +294,24 @@
 ### 7.1 CRUD Data Poli
 
 #### UI Components
-- [ ] Buat page `/master/poli`
-- [ ] DataTable dengan kolom: ID, Nama, Created At, Aksi
-- [ ] Search by nama
-- [ ] Tab: Active | Trashed
+- [x] Buat page `/master/poli`
+- [x] DataTable dengan kolom: ID, Nama, Created At, Aksi
+- [x] Search by nama
+- [x] Tab: Active | Trashed
 
 #### Form
-- [ ] Modal form tambah poli
-- [ ] Modal form edit poli
-- [ ] Confirm dialog hapus
+- [x] Modal form tambah poli
+- [x] Modal form edit poli
+- [x] Confirm dialog hapus
 
 #### API Integration
-- [ ] `GET /api/poly` - List poli
-- [ ] `GET /api/poly?search=` - Search poli
-- [ ] `POST /api/poly` - Tambah poli
-- [ ] `PUT /api/poly/{id}` - Update poli
-- [ ] `DELETE /api/poly/{id}` - Hapus poli (soft delete)
-- [ ] `GET /api/poly/trashed` - List poli terhapus
-- [ ] `POST /api/poly/{id}/restore` - Restore poli
+- [x] `GET /api/poly` - List poli
+- [x] `GET /api/poly?search=` - Search poli
+- [x] `POST /api/poly` - Tambah poli
+- [x] `PUT /api/poly/{id}` - Update poli
+- [x] `DELETE /api/poly/{id}` - Hapus poli (soft delete)
+- [x] `GET /api/poly/trashed` - List poli terhapus
+- [x] `POST /api/poly/{id}/restore` - Restore poli
 
 ### 7.2 CRUD Data Roles
 
