@@ -463,6 +463,7 @@
 1. **Gunakan `ref_search_documentation` MCP** untuk mendapatkan konteks dokumentasi yang lengkap sebelum implementasi, agar tidak terjadi kesalahan sintaks.
 2. **Gunakan `get_code_context_exa` / `web_search_exa`** untuk web search, fetching dokumentasi terbaru, atau mencari solusi dari library/SDK.
 3. **Gunakan shadcn MCP** (`search_items_in_registries`, `view_items_in_registries`, `get_item_examples_from_registries`) untuk dokumentasi & contoh komponen shadcn/ui terbaru.
+4. **Setiap PR harus menyertakan "How to Test"** untuk manual verification oleh reviewer.
 
 _Tambahkan catatan penting lainnya di sini..._
 
