@@ -57,6 +57,22 @@ function LoginPage() {
     },
   })
 
+  // TODO: Remove this bypass after BE credentials confirmed
+  const handleBypassLogin = () => {
+    const mockUser = {
+      id: 1,
+      name: "Super Admin",
+      username: "superadmin",
+      email: "superadmin@mail.com",
+      poly_id: null,
+      poly: null,
+      roles: [{ id: 1, name: "Super Admin", created_at: "", updated_at: "", deleted_at: null }],
+    }
+    setAuth(mockUser, "bypass-token")
+    toast.success("Login berhasil (bypass)")
+    router.navigate({ to: "/" })
+  }
+
   const onSubmit = handleSubmit((data) => {
     loginMutation.mutate(data)
   })
@@ -112,6 +128,16 @@ function LoginPage() {
               ) : (
                 "Masuk"
               )}
+            </Button>
+
+            {/* TODO: Remove bypass button after BE credentials confirmed */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleBypassLogin}
+            >
+              Bypass Login (Dev Only)
             </Button>
           </form>
         </CardContent>
