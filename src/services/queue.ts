@@ -22,7 +22,7 @@ let mockQueues: Queue[] = [
   { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "IN_SERVICE", registration_time: "07:35:00", arrival_time: "07:50:00", serving_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
   { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:40:00", arrival_time: "08:00:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
   { id: 4, queue_number: "A004", patient_id: 4, patient: mockPatients[3], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:45:00", arrival_time: "08:10:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
-  { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "ARRIVED", registration_time: "07:50:00", arrival_time: null, serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
+  { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", registration_time: "07:50:00", arrival_time: "08:15:00", serving_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), created_at: "", updated_at: "" },
 ]
 
 let nextId = 6
@@ -41,7 +41,7 @@ export const queueService = {
       if (params?.status) filtered = filtered.filter(q => q.status === params.status)
       // Sort by status priority then arrival_time
       filtered.sort((a, b) => {
-        const statusOrder: Record<string, number> = { IN_SERVICE: 0, WAITING: 1, ARRIVED: 2, DONE: 3, NO_SHOW: 4, CANCELLED: 5 }
+        const statusOrder: Record<string, number> = { IN_SERVICE: 0, WAITING: 1, DONE: 2, NO_SHOW: 3, CANCELLED: 4 }
         if (statusOrder[a.status] !== statusOrder[b.status]) {
           return statusOrder[a.status] - statusOrder[b.status]
         }
@@ -90,9 +90,9 @@ export const queueService = {
         doctor: mockDoctor,
         schedule_id: data.schedule_id,
         schedule: mockSchedule,
-        status: "ARRIVED",
+        status: "WAITING",
         registration_time: format(new Date(), "HH:mm:ss"),
-        arrival_time: null,
+        arrival_time: format(new Date(), "HH:mm:ss"),
         serving_time: null,
         done_time: null,
         queue_date: data.queue_date,
@@ -116,7 +116,6 @@ export const queueService = {
       mockQueues[idx] = { 
         ...mockQueues[idx], 
         status: data.status,
-        arrival_time: data.status === "WAITING" && !mockQueues[idx].arrival_time ? now : mockQueues[idx].arrival_time,
         serving_time: data.status === "IN_SERVICE" ? now : mockQueues[idx].serving_time,
         done_time: (data.status === "DONE" || data.status === "NO_SHOW") ? now : mockQueues[idx].done_time,
         updated_at: new Date().toISOString(),

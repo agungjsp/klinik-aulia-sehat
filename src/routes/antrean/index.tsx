@@ -6,10 +6,11 @@ import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format, parse } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { Plus, UserCheck, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal, CalendarIcon } from "lucide-react"
+import { Plus, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal, CalendarIcon } from "lucide-react"
 import { useQueueList, useQueueCreate, useQueueUpdateStatus, useQueueDelete, usePolyList, useScheduleList } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -47,8 +48,7 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>
 
 const statusConfig: Record<QueueStatus, { label: string; color: string; bgColor: string }> = {
-  ARRIVED: { label: "Daftar Ulang", color: "text-blue-700", bgColor: "bg-blue-100" },
-  WAITING: { label: "Menunggu", color: "text-orange-700", bgColor: "bg-orange-100" },
+  WAITING: { label: "Menunggu", color: "text-blue-700", bgColor: "bg-blue-100" },
   IN_SERVICE: { label: "Dilayani", color: "text-yellow-700", bgColor: "bg-yellow-100" },
   DONE: { label: "Selesai", color: "text-green-700", bgColor: "bg-green-100" },
   NO_SHOW: { label: "Tidak Hadir", color: "text-gray-700", bgColor: "bg-gray-200" },
@@ -94,7 +94,6 @@ function AntreanPage() {
   // Group queues by status for summary
   const summary = {
     total: queues.length,
-    arrived: queues.filter(q => q.status === "ARRIVED").length,
     waiting: queues.filter(q => q.status === "WAITING").length,
     in_service: queues.filter(q => q.status === "IN_SERVICE").length,
     done: queues.filter(q => q.status === "DONE").length,
@@ -138,11 +137,6 @@ function AntreanPage() {
 
   const getNextActions = (queue: Queue) => {
     switch (queue.status) {
-      case "ARRIVED":
-        return [
-          { label: "Siap Antre", icon: UserCheck, status: "WAITING" as QueueStatus, variant: "default" as const },
-          { label: "No Show", icon: XCircle, status: "NO_SHOW" as QueueStatus, variant: "outline" as const },
-        ]
       case "WAITING":
         return [
           { label: "Panggil", icon: Play, status: "IN_SERVICE" as QueueStatus, variant: "default" as const },
@@ -204,8 +198,7 @@ function AntreanPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">Total: {summary.total}</Badge>
-          <Badge className="bg-blue-100 text-blue-700">Daftar Ulang: {summary.arrived}</Badge>
-          <Badge className="bg-orange-100 text-orange-700">Menunggu: {summary.waiting}</Badge>
+          <Badge className="bg-blue-100 text-blue-700">Menunggu: {summary.waiting}</Badge>
           <Badge className="bg-yellow-100 text-yellow-700">Dilayani: {summary.in_service}</Badge>
           <Badge className="bg-green-100 text-green-700">Selesai: {summary.done}</Badge>
           <Badge className="bg-gray-200 text-gray-700">No Show: {summary.no_show}</Badge>
@@ -214,22 +207,20 @@ function AntreanPage() {
 
       {/* Queue List */}
       <div className="rounded-lg border">
-        <div className="grid grid-cols-[80px_1fr_150px_120px_100px_100px_150px] gap-4 border-b bg-muted/50 p-3 text-sm font-medium">
+        <div className="grid grid-cols-[80px_1fr_150px_100px_100px_150px] gap-4 border-b bg-muted/50 p-3 text-sm font-medium">
           <div>No.</div>
           <div>Pasien</div>
           <div>Poli / Dokter</div>
-          <div>Jam Daftar</div>
           <div>Jam Datang</div>
           <div>Status</div>
           <div className="text-right">Aksi</div>
         </div>
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-[80px_1fr_150px_120px_100px_100px_150px] gap-4 border-b p-3">
+            <div key={i} className="grid grid-cols-[80px_1fr_150px_100px_100px_150px] gap-4 border-b p-3">
               <Skeleton className="h-5 w-12" />
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-5 w-16" />
               <Skeleton className="h-5 w-16" />
               <Skeleton className="h-5 w-20" />
               <Skeleton className="h-5 w-24 ml-auto" />
@@ -243,7 +234,7 @@ function AntreanPage() {
           queues.map((queue) => (
             <div
               key={queue.id}
-              className={`grid grid-cols-[80px_1fr_150px_120px_100px_100px_150px] gap-4 border-b p-3 items-center ${
+              className={`grid grid-cols-[80px_1fr_150px_100px_100px_150px] gap-4 border-b p-3 items-center ${
                 queue.status === "IN_SERVICE" ? "bg-yellow-50" : ""
               }`}
             >
@@ -256,13 +247,12 @@ function AntreanPage() {
                 <p className="text-sm">{queue.poly.name}</p>
                 <p className="text-xs text-muted-foreground">{queue.doctor.name}</p>
               </div>
-              <div className="text-sm">{queue.registration_time?.slice(0, 5)}</div>
               <div className="text-sm">{queue.arrival_time?.slice(0, 5) || "-"}</div>
               <div><StatusBadge status={queue.status} /></div>
               <div className="flex justify-end gap-1">
                 {(() => {
                   const actions = getNextActions(queue)
-                  const showDelete = queue.status === "ARRIVED" || queue.status === "WAITING"
+                  const showDelete = queue.status === "WAITING"
                   
                   if (actions.length + (showDelete ? 1 : 0) > 1) {
                     return (
@@ -420,7 +410,7 @@ function AntreanPage() {
 
             <div className="space-y-2">
               <Label htmlFor="notes">Catatan (opsional)</Label>
-              <Input id="notes" {...register("notes")} placeholder="Keluhan atau catatan tambahan" />
+              <Textarea id="notes" {...register("notes")} placeholder="Keluhan atau catatan tambahan" rows={3} />
             </div>
 
             <div className="flex justify-end gap-2">
