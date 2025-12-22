@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JadwalIndexRouteImport } from './routes/jadwal/index'
+import { Route as AntreanIndexRouteImport } from './routes/antrean/index'
 import { Route as MasterUsersRouteImport } from './routes/master/users'
 import { Route as MasterRolesRouteImport } from './routes/master/roles'
 import { Route as MasterPoliRouteImport } from './routes/master/poli'
@@ -35,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
 const JadwalIndexRoute = JadwalIndexRouteImport.update({
   id: '/jadwal/',
   path: '/jadwal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AntreanIndexRoute = AntreanIndexRouteImport.update({
+  id: '/antrean/',
+  path: '/antrean/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MasterUsersRoute = MasterUsersRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/antrean': typeof AntreanIndexRoute
   '/jadwal': typeof JadwalIndexRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/antrean': typeof AntreanIndexRoute
   '/jadwal': typeof JadwalIndexRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/antrean/': typeof AntreanIndexRoute
   '/jadwal/': typeof JadwalIndexRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/antrean'
     | '/jadwal'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/antrean'
     | '/jadwal'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/antrean/'
     | '/jadwal/'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   MasterPoliRoute: typeof MasterPoliRoute
   MasterRolesRoute: typeof MasterRolesRoute
   MasterUsersRoute: typeof MasterUsersRoute
+  AntreanIndexRoute: typeof AntreanIndexRoute
   JadwalIndexRoute: typeof JadwalIndexRoute
 }
 
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JadwalIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/antrean/': {
+      id: '/antrean/'
+      path: '/antrean'
+      fullPath: '/antrean'
+      preLoaderRoute: typeof AntreanIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/master/users': {
       id: '/master/users'
       path: '/master/users'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   MasterPoliRoute: MasterPoliRoute,
   MasterRolesRoute: MasterRolesRoute,
   MasterUsersRoute: MasterUsersRoute,
+  AntreanIndexRoute: AntreanIndexRoute,
   JadwalIndexRoute: JadwalIndexRoute,
 }
 export const routeTree = rootRouteImport
