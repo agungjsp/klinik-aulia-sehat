@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { getDefaultRoute } from "@/lib/roles"
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username wajib diisi"),
@@ -21,9 +22,9 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState()
+    const { isAuthenticated, user } = useAuthStore.getState()
     if (isAuthenticated) {
-      throw redirect({ to: "/" })
+      throw redirect({ to: getDefaultRoute(user?.roles) })
     }
   },
   component: LoginPage,
@@ -47,7 +48,7 @@ function LoginPage() {
       if (data.status === "success" && data.token && data.user) {
         setAuth(data.user, data.token)
         toast.success("Login berhasil")
-        router.navigate({ to: "/" })
+        router.navigate({ to: getDefaultRoute(data.user.roles) })
       } else {
         toast.error(data.message || "Login gagal")
       }
