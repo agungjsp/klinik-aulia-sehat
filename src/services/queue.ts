@@ -100,4 +100,23 @@ export const queueService = {
     }
     throw new Error("API not implemented")
   },
+
+  checkQueue: async (code: string): Promise<ApiResponse<Queue> & { position?: number }> => {
+    if (USE_MOCK) {
+      await delay(300)
+      const today = format(new Date(), "yyyy-MM-dd")
+      const queue = mockQueues.find(q => q.queue_number.toUpperCase() === code.toUpperCase() && q.queue_date === today)
+      if (!queue) return { status: "error", message: "Antrean tidak ditemukan" }
+      // Calculate position (how many people ahead)
+      const activeStatuses: QueueStatus[] = ["CHECKED_IN", "IN_ANAMNESA", "WAITING_DOCTOR"]
+      if (!activeStatuses.includes(queue.status)) return { status: "success", data: queue, position: 0 }
+      const ahead = mockQueues.filter(q => 
+        q.queue_date === today && 
+        activeStatuses.includes(q.status) && 
+        q.check_in_time < queue.check_in_time
+      ).length
+      return { status: "success", data: queue, position: ahead }
+    }
+    throw new Error("API not implemented")
+  },
 }
