@@ -48,9 +48,10 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>
 
 const statusConfig: Record<QueueStatus, { label: string; color: string; bgColor: string }> = {
-  WAITING: { label: "Menunggu", color: "text-blue-700", bgColor: "bg-blue-100" },
-  ANAMNESA: { label: "Anamnesa", color: "text-orange-700", bgColor: "bg-orange-100" },
-  WITH_DOCTOR: { label: "Dengan Dokter", color: "text-yellow-700", bgColor: "bg-yellow-100" },
+  CHECKED_IN: { label: "Check-in", color: "text-blue-700", bgColor: "bg-blue-100" },
+  IN_ANAMNESA: { label: "Anamnesa", color: "text-orange-700", bgColor: "bg-orange-100" },
+  WAITING_DOCTOR: { label: "Tunggu Dokter", color: "text-purple-700", bgColor: "bg-purple-100" },
+  IN_CONSULTATION: { label: "Konsultasi", color: "text-yellow-700", bgColor: "bg-yellow-100" },
   DONE: { label: "Selesai", color: "text-green-700", bgColor: "bg-green-100" },
   NO_SHOW: { label: "Tidak Hadir", color: "text-gray-700", bgColor: "bg-gray-200" },
   CANCELLED: { label: "Dibatalkan", color: "text-red-700", bgColor: "bg-red-100" },
@@ -95,11 +96,11 @@ function AntreanPage() {
   // Group queues by status for summary
   const summary = {
     total: queues.length,
-    waiting: queues.filter(q => q.status === "WAITING").length,
-    anamnesa: queues.filter(q => q.status === "ANAMNESA").length,
-    with_doctor: queues.filter(q => q.status === "WITH_DOCTOR").length,
+    checked_in: queues.filter(q => q.status === "CHECKED_IN").length,
+    in_anamnesa: queues.filter(q => q.status === "IN_ANAMNESA").length,
+    waiting_doctor: queues.filter(q => q.status === "WAITING_DOCTOR").length,
+    in_consultation: queues.filter(q => q.status === "IN_CONSULTATION").length,
     done: queues.filter(q => q.status === "DONE").length,
-    no_show: queues.filter(q => q.status === "NO_SHOW").length,
   }
 
   const openRegisterForm = () => {
@@ -139,17 +140,22 @@ function AntreanPage() {
 
   const getNextActions = (queue: Queue) => {
     switch (queue.status) {
-      case "WAITING":
+      case "CHECKED_IN":
         return [
-          { label: "Anamnesa", icon: Play, status: "ANAMNESA" as QueueStatus, variant: "default" as const },
+          { label: "Mulai Anamnesa", icon: Play, status: "IN_ANAMNESA" as QueueStatus, variant: "default" as const },
           { label: "No Show", icon: XCircle, status: "NO_SHOW" as QueueStatus, variant: "outline" as const },
         ]
-      case "ANAMNESA":
+      case "IN_ANAMNESA":
         return [
-          { label: "Ke Dokter", icon: Play, status: "WITH_DOCTOR" as QueueStatus, variant: "default" as const },
+          { label: "Selesai Anamnesa", icon: Play, status: "WAITING_DOCTOR" as QueueStatus, variant: "default" as const },
           { label: "No Show", icon: XCircle, status: "NO_SHOW" as QueueStatus, variant: "outline" as const },
         ]
-      case "WITH_DOCTOR":
+      case "WAITING_DOCTOR":
+        return [
+          { label: "Mulai Konsultasi", icon: Play, status: "IN_CONSULTATION" as QueueStatus, variant: "default" as const },
+          { label: "No Show", icon: XCircle, status: "NO_SHOW" as QueueStatus, variant: "outline" as const },
+        ]
+      case "IN_CONSULTATION":
         return [
           { label: "Selesai", icon: CheckCircle, status: "DONE" as QueueStatus, variant: "default" as const },
         ]
@@ -205,11 +211,11 @@ function AntreanPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">Total: {summary.total}</Badge>
-          <Badge className="bg-blue-100 text-blue-700">Menunggu: {summary.waiting}</Badge>
-          <Badge className="bg-orange-100 text-orange-700">Anamnesa: {summary.anamnesa}</Badge>
-          <Badge className="bg-yellow-100 text-yellow-700">Dokter: {summary.with_doctor}</Badge>
+          <Badge className="bg-blue-100 text-blue-700">Check-in: {summary.checked_in}</Badge>
+          <Badge className="bg-orange-100 text-orange-700">Anamnesa: {summary.in_anamnesa}</Badge>
+          <Badge className="bg-purple-100 text-purple-700">Tunggu Dokter: {summary.waiting_doctor}</Badge>
+          <Badge className="bg-yellow-100 text-yellow-700">Konsultasi: {summary.in_consultation}</Badge>
           <Badge className="bg-green-100 text-green-700">Selesai: {summary.done}</Badge>
-          <Badge className="bg-gray-200 text-gray-700">No Show: {summary.no_show}</Badge>
         </div>
       </div>
 
@@ -219,7 +225,7 @@ function AntreanPage() {
           <div>No.</div>
           <div>Pasien</div>
           <div>Poli / Dokter</div>
-          <div>Jam Datang</div>
+          <div>Check-in</div>
           <div>Status</div>
           <div className="text-right">Aksi</div>
         </div>
@@ -243,7 +249,7 @@ function AntreanPage() {
             <div
               key={queue.id}
               className={`grid grid-cols-[80px_1fr_150px_100px_100px_150px] gap-4 border-b p-3 items-center ${
-                queue.status === "ANAMNESA" || queue.status === "WITH_DOCTOR" ? "bg-yellow-50" : ""
+                queue.status === "IN_ANAMNESA" || queue.status === "IN_CONSULTATION" ? "bg-yellow-50" : ""
               }`}
             >
               <div className="font-mono font-bold text-lg">{queue.queue_number}</div>
@@ -255,12 +261,12 @@ function AntreanPage() {
                 <p className="text-sm">{queue.poly.name}</p>
                 <p className="text-xs text-muted-foreground">{queue.doctor.name}</p>
               </div>
-              <div className="text-sm">{queue.arrival_time?.slice(0, 5) || "-"}</div>
+              <div className="text-sm">{queue.check_in_time?.slice(0, 5) || "-"}</div>
               <div><StatusBadge status={queue.status} /></div>
               <div className="flex justify-end gap-1">
                 {(() => {
                   const actions = getNextActions(queue)
-                  const showDelete = queue.status === "WAITING"
+                  const showDelete = queue.status === "CHECKED_IN"
                   
                   if (actions.length + (showDelete ? 1 : 0) > 1) {
                     return (
