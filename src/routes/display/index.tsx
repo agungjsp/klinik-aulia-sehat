@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { useQueueList } from "@/hooks"
+import { useQueueList, useVoiceAnnouncement } from "@/hooks"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Stethoscope, ClipboardList, Clock, Activity, CalendarDays } from "lucide-react"
@@ -35,6 +35,17 @@ function DisplayPage() {
   const waiting = queues
     .filter((q) => ["CHECKED_IN", "WAITING_DOCTOR"].includes(q.status))
     .slice(0, 7)
+
+  const { announce } = useVoiceAnnouncement()
+  const previousQueueRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (inConsultation && inConsultation.id !== previousQueueRef.current) {
+      previousQueueRef.current = inConsultation.id
+      const text = `Nomor Antrean ${inConsultation.queue_number}, ${inConsultation.patient.name}, Silakan ke Ruang Dokter.`
+      announce(text)
+    }
+  }, [inConsultation, announce])
 
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-50 overflow-hidden font-sans text-slate-900 selection:bg-teal-100">
