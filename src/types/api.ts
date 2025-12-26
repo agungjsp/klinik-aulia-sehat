@@ -79,7 +79,14 @@ export interface ScheduleRequest {
 
 
 // Queue/Antrean Types
-export type QueueStatus = "WAITING" | "ANAMNESA" | "WITH_DOCTOR" | "DONE" | "NO_SHOW" | "CANCELLED"
+export type QueueStatus = 
+  | "CHECKED_IN"       // Sudah daftar ulang (timestamp = urutan antrean)
+  | "IN_ANAMNESA"      // Sedang anamnesis dengan perawat
+  | "WAITING_DOCTOR"   // Selesai anamnesa, menunggu dipanggil dokter
+  | "IN_CONSULTATION"  // Sedang konsultasi dengan dokter
+  | "DONE"             // Selesai
+  | "NO_SHOW"          // Tidak hadir
+  | "CANCELLED"        // Dibatalkan
 
 export interface Patient {
   id: number
@@ -104,14 +111,23 @@ export interface Queue {
   schedule_id: number
   schedule: Schedule
   status: QueueStatus
-  registration_time: string
-  arrival_time: string | null
-  serving_time: string | null
+  check_in_time: string        // Waktu daftar ulang (penentu urutan)
+  anamnesa_time: string | null
+  consultation_time: string | null
   done_time: string | null
   queue_date: string
   notes?: string
+  status_history: QueueStatusHistory[]
   created_at: string
   updated_at: string
+}
+
+export interface QueueStatusHistory {
+  status: QueueStatus
+  changed_at: string
+  changed_by: number
+  changed_by_name: string
+  notes?: string
 }
 
 export interface QueueCreateRequest {
