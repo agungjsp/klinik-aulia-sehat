@@ -6,7 +6,7 @@ import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format, parse } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { Plus, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal, CalendarIcon } from "lucide-react"
+import { Plus, Play, CheckCircle, XCircle, Trash2, RefreshCw, MoreHorizontal, CalendarIcon, Search } from "lucide-react"
 import { useQueueList, useQueueCreate, useQueueUpdateStatus, useQueueDelete, usePolyList, useScheduleList } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,6 +67,9 @@ function AntreanPage() {
   const [selectedDate, setSelectedDate] = useState(today)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterPolyId, setFilterPolyId] = useState<string>("all")
 
   const { data: queueData, isLoading, refetch } = useQueueList({ date: selectedDate })
   const { data: polyData } = usePolyList()
@@ -90,14 +93,24 @@ function AntreanPage() {
     ? schedules.filter(s => s.doctor?.poly_id === selectedPolyId)
     : schedules
 
-  const queues = queueData?.data || []
+  const allQueues = queueData?.data || []
   const polies = polyData?.data || []
+
+  // Filter queues
+  const queues = allQueues.filter(q => {
+    const matchSearch = !searchQuery || 
+      q.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.queue_number.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchStatus = filterStatus === "all" || q.status === filterStatus
+    const matchPoly = filterPolyId === "all" || q.poly.id === Number(filterPolyId)
+    return matchSearch && matchStatus && matchPoly
+  })
 
   // Group queues by status for summary
   const summary = {
-    total: queues.length,
-    checked_in: queues.filter(q => q.status === "CHECKED_IN").length,
-    in_anamnesa: queues.filter(q => q.status === "IN_ANAMNESA").length,
+    total: allQueues.length,
+    checked_in: allQueues.filter(q => q.status === "CHECKED_IN").length,
+    in_anamnesa: allQueues.filter(q => q.status === "IN_ANAMNESA").length,
     waiting_doctor: queues.filter(q => q.status === "WAITING_DOCTOR").length,
     in_consultation: queues.filter(q => q.status === "IN_CONSULTATION").length,
     done: queues.filter(q => q.status === "DONE").length,
@@ -182,7 +195,7 @@ function AntreanPage() {
         </div>
       </div>
 
-      {/* Date & Summary */}
+      {/* Date & Filters */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Label>Tanggal:</Label>
@@ -191,7 +204,7 @@ function AntreanPage() {
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-[240px] justify-start text-left font-normal",
+                  "w-[200px] justify-start text-left font-normal",
                   !selectedDate && "text-muted-foreground"
                 )}
               >
@@ -209,14 +222,34 @@ function AntreanPage() {
             </PopoverContent>
           </Popover>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <Select value={filterPolyId} onValueChange={setFilterPolyId}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Semua Poli" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Poli</SelectItem>
+            {polies.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Semua Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Status</SelectItem>
+            {Object.entries(statusConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Cari nama/no antrean..." className="pl-8 w-[200px]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="flex flex-wrap gap-2">
           <Badge variant="outline">Total: {summary.total}</Badge>
           <Badge className="bg-blue-100 text-blue-700">Check-in: {summary.checked_in}</Badge>
           <Badge className="bg-orange-100 text-orange-700">Anamnesa: {summary.in_anamnesa}</Badge>
           <Badge className="bg-purple-100 text-purple-700">Tunggu Dokter: {summary.waiting_doctor}</Badge>
           <Badge className="bg-yellow-100 text-yellow-700">Konsultasi: {summary.in_consultation}</Badge>
           <Badge className="bg-green-100 text-green-700">Selesai: {summary.done}</Badge>
-        </div>
       </div>
 
       {/* Queue List */}
