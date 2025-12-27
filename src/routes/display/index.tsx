@@ -42,8 +42,7 @@ function DisplayPage() {
   useEffect(() => {
     if (inConsultation && inConsultation.id !== previousQueueRef.current) {
       previousQueueRef.current = inConsultation.id
-      const text = `Nomor Antrean ${inConsultation.queue_number}, ${inConsultation.patient.name}, Silakan ke Ruang Dokter.`
-      announce(text)
+      announce(inConsultation.queue_number, "Dokter")
     }
   }, [inConsultation, announce])
 

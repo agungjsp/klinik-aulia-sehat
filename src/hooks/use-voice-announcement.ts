@@ -1,7 +1,57 @@
 import { useCallback, useState } from "react"
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js"
 
 const CHIME_URL = "https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"
+
+const DIGIT_WORDS = ["nol", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"]
+
+function numberToWords(n: number): string[] {
+  if (n === 0) return ["nol"]
+  if (n < 0) return ["minus", ...numberToWords(-n)]
+
+  const words: string[] = []
+
+  if (n >= 1000) {
+    const ribu = Math.floor(n / 1000)
+    if (ribu === 1) words.push("seribu")
+    else words.push(...numberToWords(ribu), "ribu")
+    n %= 1000
+  }
+
+  if (n >= 100) {
+    const ratus = Math.floor(n / 100)
+    if (ratus === 1) words.push("seratus")
+    else words.push(DIGIT_WORDS[ratus], "ratus")
+    n %= 100
+  }
+
+  if (n >= 20) {
+    words.push(DIGIT_WORDS[Math.floor(n / 10)], "puluh")
+    if (n % 10 !== 0) words.push(DIGIT_WORDS[n % 10])
+  } else if (n >= 12) {
+    words.push(DIGIT_WORDS[n - 10], "belas")
+  } else if (n === 11) {
+    words.push("sebelas")
+  } else if (n === 10) {
+    words.push("sepuluh")
+  } else if (n > 0) {
+    words.push(DIGIT_WORDS[n])
+  }
+
+  return words
+}
+
+function parseQueueNumber(queue: string): string[] {
+  const match = queue.match(/^([A-Z])?(\d+)$/i)
+  if (!match) return [queue]
+
+  const [, letter, num] = match
+  const words: string[] = []
+
+  if (letter) words.push(letter.toUpperCase())
+  words.push(...numberToWords(parseInt(num, 10)))
+
+  return words
+}
 
 export function useVoiceAnnouncement() {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -10,93 +60,45 @@ export function useVoiceAnnouncement() {
     return new Promise((resolve) => {
       const audio = new Audio(CHIME_URL)
       audio.onended = () => resolve()
-      audio.onerror = () => {
-        console.error("Failed to play chime")
-        resolve()
-      }
-      audio.play().catch((err) => {
-        console.warn("Audio playback failed (autoplay policy?):", err)
-        resolve()
-      })
+      audio.onerror = () => resolve()
+      audio.play().catch(() => resolve())
     })
   }, [])
 
-  const speakWithElevenLabs = useCallback(async (text: string) => {
-    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY
-    const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID
-
-    if (!apiKey || !voiceId) {
-      throw new Error("Missing ElevenLabs configuration")
-    }
-
-    const client = new ElevenLabsClient({ apiKey })
-    
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const audioStream = await client.textToSpeech.convert(voiceId, {
-        text,
-        model_id: "eleven_multilingual_v2",
-        output_format: "mp3_44100_128",
-      } as any)
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = new Response(audioStream as any)
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      
-      return new Promise<void>((resolve) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(url)
-          resolve()
-        }
-        audio.onerror = () => resolve()
-        audio.play()
-      })
-
-    } catch (error) {
-      console.error("ElevenLabs error:", error)
-      throw error
-    }
-  }, [])
-
-  const speakWithBrowser = useCallback((text: string) => {
-    return new Promise<void>((resolve) => {
-      if (!("speechSynthesis" in window)) {
-        resolve()
-        return
-      }
-
-      const utterance = new SpeechSynthesisUtterance(text)
+  const speakWord = useCallback((word: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!("speechSynthesis" in window)) return resolve()
+      const utterance = new SpeechSynthesisUtterance(word)
       utterance.lang = "id-ID"
+      utterance.rate = 0.9
       utterance.onend = () => resolve()
       utterance.onerror = () => resolve()
       window.speechSynthesis.speak(utterance)
     })
   }, [])
 
-  const announce = useCallback(async (text: string) => {
+  const speakSequence = useCallback(async (words: string[]) => {
+    for (const word of words) {
+      await speakWord(word)
+      await new Promise((r) => setTimeout(r, 100))
+    }
+  }, [speakWord])
+
+  const announce = useCallback(async (queueNumber: string, room?: string) => {
     if (isPlaying) return
     setIsPlaying(true)
-
     try {
       await playChime()
-      
-      try {
-        await speakWithElevenLabs(text)
-      } catch (err) {
-        console.warn("Falling back to browser TTS", err)
-        await speakWithBrowser(text)
+      await speakSequence(["nomor", "antrian"])
+      await speakSequence(parseQueueNumber(queueNumber))
+      if (room) {
+        await speakSequence(["silahkan", "ke", "ruang"])
+        await speakSequence(room.split(/\s+/))
       }
-    } catch (error) {
-      console.error("Announcement failed", error)
     } finally {
       setIsPlaying(false)
     }
-  }, [isPlaying, playChime, speakWithElevenLabs, speakWithBrowser])
+  }, [isPlaying, playChime, speakSequence])
 
-  return {
-    announce,
-    isPlaying
-  }
+  return { announce, isPlaying }
 }
