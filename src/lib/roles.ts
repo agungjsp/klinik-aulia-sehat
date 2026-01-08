@@ -1,30 +1,53 @@
 // Role names as stored in database
 export const ROLES = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN: "Admin", 
+  SUPERADMIN: "Superadmin",
+  KEPALA_KLINIK: "Kepala Klinik",
   DOKTER: "Dokter",
-  PERAWAT: "Perawat",
-  RESEPSIONIS: "Resepsionis",
+  PERAWAT_ANAMNESA: "Perawat Anamnesa",
+  PERAWAT_ASISTEN: "Perawat Asisten",
+  ADMINISTRASI: "Administrasi",
 } as const
 
 export type RoleName = (typeof ROLES)[keyof typeof ROLES]
 
 // Role-based route access
 export const ROLE_ROUTES: Record<RoleName, string[]> = {
-  [ROLES.SUPER_ADMIN]: ["*"], // All routes
-  [ROLES.ADMIN]: ["/", "/master/*", "/jadwal", "/antrean", "/laporan/*"],
+  [ROLES.SUPERADMIN]: ["*"], // All routes
+  [ROLES.KEPALA_KLINIK]: ["/", "/laporan/*", "/jadwal", "/antrean", "/master/*"],
   [ROLES.DOKTER]: ["/", "/dokter/*"],
-  [ROLES.PERAWAT]: ["/", "/perawat/*"],
-  [ROLES.RESEPSIONIS]: ["/", "/resepsionis/*"],
+  [ROLES.PERAWAT_ANAMNESA]: ["/", "/perawat/*"],
+  [ROLES.PERAWAT_ASISTEN]: ["/", "/perawat-asisten/*"],
+  [ROLES.ADMINISTRASI]: ["/", "/administrasi/*", "/jadwal"],
 }
 
 // Default redirect after login per role
 export const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
-  [ROLES.SUPER_ADMIN]: "/",
-  [ROLES.ADMIN]: "/",
+  [ROLES.SUPERADMIN]: "/",
+  [ROLES.KEPALA_KLINIK]: "/",
   [ROLES.DOKTER]: "/dokter/antrean",
-  [ROLES.PERAWAT]: "/perawat/antrean",
-  [ROLES.RESEPSIONIS]: "/resepsionis/antrean",
+  [ROLES.PERAWAT_ANAMNESA]: "/perawat/antrean",
+  [ROLES.PERAWAT_ASISTEN]: "/perawat-asisten/antrean",
+  [ROLES.ADMINISTRASI]: "/administrasi/antrean",
+}
+
+// Role display labels (for UI)
+export const ROLE_LABELS: Record<RoleName, string> = {
+  [ROLES.SUPERADMIN]: "Superadmin",
+  [ROLES.KEPALA_KLINIK]: "Kepala Klinik",
+  [ROLES.DOKTER]: "Dokter",
+  [ROLES.PERAWAT_ANAMNESA]: "Perawat Anamnesa",
+  [ROLES.PERAWAT_ASISTEN]: "Perawat Asisten Dokter",
+  [ROLES.ADMINISTRASI]: "Administrasi",
+}
+
+// Role colors (for badges/UI)
+export const ROLE_COLORS: Record<RoleName, string> = {
+  [ROLES.SUPERADMIN]: "bg-purple-100 text-purple-800",
+  [ROLES.KEPALA_KLINIK]: "bg-blue-100 text-blue-800",
+  [ROLES.DOKTER]: "bg-green-100 text-green-800",
+  [ROLES.PERAWAT_ANAMNESA]: "bg-orange-100 text-orange-800",
+  [ROLES.PERAWAT_ASISTEN]: "bg-yellow-100 text-yellow-800",
+  [ROLES.ADMINISTRASI]: "bg-gray-100 text-gray-800",
 }
 
 // Check if user has specific role
@@ -69,4 +92,9 @@ export const getDefaultRoute = (userRoles: { name: string }[] | undefined): stri
   const primaryRole = getPrimaryRole(userRoles)
   if (!primaryRole) return "/login"
   return ROLE_DEFAULT_ROUTE[primaryRole] ?? "/"
+}
+
+// Check if user is admin-level (can access admin features)
+export const isAdminLevel = (userRoles: { name: string }[] | undefined): boolean => {
+  return hasAnyRole(userRoles, [ROLES.SUPERADMIN, ROLES.KEPALA_KLINIK])
 }

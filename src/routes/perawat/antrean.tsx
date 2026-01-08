@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -7,6 +8,7 @@ import { useQueueList, useQueueUpdateStatus } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { Queue, QueueStatus } from "@/types"
 
 export const Route = createFileRoute("/perawat/antrean")({
@@ -18,20 +20,48 @@ function PerawatAntreanPage() {
   const { data: queueData, isLoading, refetch } = useQueueList({ date: today })
   const updateStatusMutation = useQueueUpdateStatus()
 
+  // Confirmation state
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{ queue: Queue; status: QueueStatus; title: string; description: string } | null>(null)
+
   const queues = queueData?.data || []
   
   // Filter only relevant queues for perawat
-  const waitingAnamnesa = queues.filter(q => q.status === "CHECKED_IN")
-  const inAnamnesa = queues.filter(q => q.status === "IN_ANAMNESA")
+  const waitingAnamnesa = queues.filter(q => q.status === "WAITING")
+  const inAnamnesa = queues.filter(q => q.status === "ANAMNESA")
 
-  const handleUpdateStatus = async (queue: Queue, newStatus: QueueStatus) => {
+  const handleUpdateStatus = (queue: Queue, newStatus: QueueStatus) => {
+    let title = "Konfirmasi"
+    let description = "Apakah Anda yakin?"
+
+    if (newStatus === "ANAMNESA") {
+      title = "Panggil Pasien"
+      description = `Panggil pasien ${queue.patient.name} ke ruang anamnesa?`
+    } else if (newStatus === "WAITING_DOCTOR") {
+      title = "Selesai Anamnesa"
+      description = `Selesaikan anamnesa untuk pasien ${queue.patient.name} dan arahkan ke dokter?`
+    }
+
+    setPendingAction({ queue, status: newStatus, title, description })
+    setConfirmOpen(true)
+  }
+
+  const confirmUpdateStatus = async () => {
+    if (!pendingAction) return
+
     try {
-      await updateStatusMutation.mutateAsync({ id: queue.id, data: { status: newStatus } })
-      toast.success(newStatus === "IN_ANAMNESA" ? "Pasien dipanggil untuk anamnesa" : "Anamnesa selesai")
+      await updateStatusMutation.mutateAsync({ id: pendingAction.queue.id, data: { status: pendingAction.status } })
+      toast.success(pendingAction.status === "ANAMNESA" ? "Pasien dipanggil untuk anamnesa" : "Anamnesa selesai")
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal mengubah status")
+    } finally {
+      setConfirmOpen(false)
+      setPendingAction(null)
     }
   }
+
+  // Helper to format queue number (remove letters)
+  const formatQueueNumber = (num: string) => num.replace(/\D/g, '')
 
   return (
     <div className="space-y-6">
@@ -60,7 +90,7 @@ function PerawatAntreanPage() {
                 <div key={queue.id} className="rounded-lg border bg-orange-50 p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-mono text-2xl font-bold text-orange-700">{queue.queue_number}</p>
+                      <p className="font-mono text-2xl font-bold text-orange-700">{formatQueueNumber(queue.queue_number)}</p>
                       <p className="font-medium">{queue.patient.name}</p>
                       <p className="text-sm text-muted-foreground">{queue.poly.name} - {queue.doctor.name}</p>
                     </div>
@@ -89,14 +119,14 @@ function PerawatAntreanPage() {
               waitingAnamnesa.map((queue, idx) => (
                 <div key={queue.id} className={`rounded-lg border p-3 flex items-center justify-between ${idx === 0 ? "bg-blue-50 border-blue-200" : ""}`}>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-lg font-bold">{queue.queue_number}</span>
+                    <span className="font-mono text-lg font-bold">{formatQueueNumber(queue.queue_number)}</span>
                     <div>
                       <p className="font-medium">{queue.patient.name}</p>
                       <p className="text-xs text-muted-foreground">Check-in: {queue.check_in_time?.slice(0, 5)}</p>
                     </div>
                   </div>
                   {idx === 0 && (
-                    <Button size="sm" onClick={() => handleUpdateStatus(queue, "IN_ANAMNESA")} disabled={updateStatusMutation.isPending}>
+                    <Button size="sm" onClick={() => handleUpdateStatus(queue, "ANAMNESA")} disabled={updateStatusMutation.isPending}>
                       <Play className="mr-1 h-4 w-4" />Panggil
                     </Button>
                   )}
@@ -107,6 +137,14 @@ function PerawatAntreanPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={pendingAction?.title || ""}
+        description={pendingAction?.description || ""}
+        onConfirm={confirmUpdateStatus}
+      />
     </div>
   )
 }

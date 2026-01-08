@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/layout"
 import { Toaster } from "@/components/ui/sonner"
 import { canAccessRoute } from "@/lib/roles"
 
-const publicPaths = ["/login", "/cek-antrean", "/display"]
+const publicPaths = ["/login", "/cek-antrean", "/display", "/403", "/no-access"]
 
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
@@ -18,9 +18,13 @@ export const Route = createRootRoute({
       throw redirect({ to: "/login" })
     }
 
-    // Role-based access check
-    if (isAuthenticated && !isPublicPath && !canAccessRoute(user?.roles, location.pathname)) {
-      throw redirect({ to: "/" })
+    if (isAuthenticated && !isPublicPath) {
+      if (!user?.roles?.length) {
+        throw redirect({ to: "/no-access" })
+      }
+      if (!canAccessRoute(user.roles, location.pathname)) {
+        throw redirect({ to: "/403" })
+      }
     }
   },
   component: RootComponent,
@@ -37,8 +41,12 @@ function RootComponent() {
 
   // Client-side route guard (for SPA navigation)
   useEffect(() => {
-    if (isAuthenticated && !isPublicPath && !canAccessRoute(user?.roles, location.pathname)) {
-      navigate({ to: "/" })
+    if (isAuthenticated && !isPublicPath) {
+      if (!user?.roles?.length) {
+        navigate({ to: "/no-access" })
+      } else if (!canAccessRoute(user.roles, location.pathname)) {
+        navigate({ to: "/403" })
+      }
     }
   }, [location.pathname, isAuthenticated, user?.roles, isPublicPath, navigate])
 
@@ -46,7 +54,7 @@ function RootComponent() {
     return (
       <>
         <Outlet />
-        <Toaster position="top-right" richColors />
+        <Toaster richColors />
       </>
     )
   }

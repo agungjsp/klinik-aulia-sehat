@@ -12,7 +12,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main className="flex-1 overflow-y-auto bg-background p-6">
         {children}
       </main>
-      <Toaster position="top-right" richColors />
+      <Toaster richColors />
     </div>
   )
 }
