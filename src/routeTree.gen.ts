@@ -9,23 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as NoAccessRouteImport } from './routes/no-access'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as R403RouteImport } from './routes/403'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JadwalIndexRouteImport } from './routes/jadwal/index'
 import { Route as DisplayIndexRouteImport } from './routes/display/index'
 import { Route as CekAntreanIndexRouteImport } from './routes/cek-antrean/index'
-import { Route as AntreanIndexRouteImport } from './routes/antrean/index'
-import { Route as ResepsionisAntreanRouteImport } from './routes/resepsionis/antrean'
 import { Route as PerawatAntreanRouteImport } from './routes/perawat/antrean'
+import { Route as PerawatAsistenAntreanRouteImport } from './routes/perawat-asisten/antrean'
 import { Route as MasterUsersRouteImport } from './routes/master/users'
 import { Route as MasterRolesRouteImport } from './routes/master/roles'
 import { Route as MasterPoliRouteImport } from './routes/master/poli'
+import { Route as MasterPasienRouteImport } from './routes/master/pasien'
 import { Route as DokterAntreanRouteImport } from './routes/dokter/antrean'
+import { Route as AdministrasiAntreanRouteImport } from './routes/administrasi/antrean'
 
+const NoAccessRoute = NoAccessRouteImport.update({
+  id: '/no-access',
+  path: '/no-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const R403Route = R403RouteImport.update({
+  id: '/403',
+  path: '/403',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplatRoute = SplatRouteImport.update({
@@ -53,19 +66,14 @@ const CekAntreanIndexRoute = CekAntreanIndexRouteImport.update({
   path: '/cek-antrean/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AntreanIndexRoute = AntreanIndexRouteImport.update({
-  id: '/antrean/',
-  path: '/antrean/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResepsionisAntreanRoute = ResepsionisAntreanRouteImport.update({
-  id: '/resepsionis/antrean',
-  path: '/resepsionis/antrean',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PerawatAntreanRoute = PerawatAntreanRouteImport.update({
   id: '/perawat/antrean',
   path: '/perawat/antrean',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerawatAsistenAntreanRoute = PerawatAsistenAntreanRouteImport.update({
+  id: '/perawat-asisten/antrean',
+  path: '/perawat-asisten/antrean',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MasterUsersRoute = MasterUsersRouteImport.update({
@@ -83,23 +91,36 @@ const MasterPoliRoute = MasterPoliRouteImport.update({
   path: '/master/poli',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MasterPasienRoute = MasterPasienRouteImport.update({
+  id: '/master/pasien',
+  path: '/master/pasien',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DokterAntreanRoute = DokterAntreanRouteImport.update({
   id: '/dokter/antrean',
   path: '/dokter/antrean',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdministrasiAntreanRoute = AdministrasiAntreanRouteImport.update({
+  id: '/administrasi/antrean',
+  path: '/administrasi/antrean',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/403': typeof R403Route
   '/login': typeof LoginRoute
+  '/no-access': typeof NoAccessRoute
+  '/administrasi/antrean': typeof AdministrasiAntreanRoute
   '/dokter/antrean': typeof DokterAntreanRoute
+  '/master/pasien': typeof MasterPasienRoute
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/perawat-asisten/antrean': typeof PerawatAsistenAntreanRoute
   '/perawat/antrean': typeof PerawatAntreanRoute
-  '/resepsionis/antrean': typeof ResepsionisAntreanRoute
-  '/antrean': typeof AntreanIndexRoute
   '/cek-antrean': typeof CekAntreanIndexRoute
   '/display': typeof DisplayIndexRoute
   '/jadwal': typeof JadwalIndexRoute
@@ -107,14 +128,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/403': typeof R403Route
   '/login': typeof LoginRoute
+  '/no-access': typeof NoAccessRoute
+  '/administrasi/antrean': typeof AdministrasiAntreanRoute
   '/dokter/antrean': typeof DokterAntreanRoute
+  '/master/pasien': typeof MasterPasienRoute
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/perawat-asisten/antrean': typeof PerawatAsistenAntreanRoute
   '/perawat/antrean': typeof PerawatAntreanRoute
-  '/resepsionis/antrean': typeof ResepsionisAntreanRoute
-  '/antrean': typeof AntreanIndexRoute
   '/cek-antrean': typeof CekAntreanIndexRoute
   '/display': typeof DisplayIndexRoute
   '/jadwal': typeof JadwalIndexRoute
@@ -123,14 +147,17 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/403': typeof R403Route
   '/login': typeof LoginRoute
+  '/no-access': typeof NoAccessRoute
+  '/administrasi/antrean': typeof AdministrasiAntreanRoute
   '/dokter/antrean': typeof DokterAntreanRoute
+  '/master/pasien': typeof MasterPasienRoute
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/perawat-asisten/antrean': typeof PerawatAsistenAntreanRoute
   '/perawat/antrean': typeof PerawatAntreanRoute
-  '/resepsionis/antrean': typeof ResepsionisAntreanRoute
-  '/antrean/': typeof AntreanIndexRoute
   '/cek-antrean/': typeof CekAntreanIndexRoute
   '/display/': typeof DisplayIndexRoute
   '/jadwal/': typeof JadwalIndexRoute
@@ -140,14 +167,17 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/403'
     | '/login'
+    | '/no-access'
+    | '/administrasi/antrean'
     | '/dokter/antrean'
+    | '/master/pasien'
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/perawat-asisten/antrean'
     | '/perawat/antrean'
-    | '/resepsionis/antrean'
-    | '/antrean'
     | '/cek-antrean'
     | '/display'
     | '/jadwal'
@@ -155,14 +185,17 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/403'
     | '/login'
+    | '/no-access'
+    | '/administrasi/antrean'
     | '/dokter/antrean'
+    | '/master/pasien'
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/perawat-asisten/antrean'
     | '/perawat/antrean'
-    | '/resepsionis/antrean'
-    | '/antrean'
     | '/cek-antrean'
     | '/display'
     | '/jadwal'
@@ -170,14 +203,17 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/403'
     | '/login'
+    | '/no-access'
+    | '/administrasi/antrean'
     | '/dokter/antrean'
+    | '/master/pasien'
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/perawat-asisten/antrean'
     | '/perawat/antrean'
-    | '/resepsionis/antrean'
-    | '/antrean/'
     | '/cek-antrean/'
     | '/display/'
     | '/jadwal/'
@@ -186,14 +222,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  R403Route: typeof R403Route
   LoginRoute: typeof LoginRoute
+  NoAccessRoute: typeof NoAccessRoute
+  AdministrasiAntreanRoute: typeof AdministrasiAntreanRoute
   DokterAntreanRoute: typeof DokterAntreanRoute
+  MasterPasienRoute: typeof MasterPasienRoute
   MasterPoliRoute: typeof MasterPoliRoute
   MasterRolesRoute: typeof MasterRolesRoute
   MasterUsersRoute: typeof MasterUsersRoute
+  PerawatAsistenAntreanRoute: typeof PerawatAsistenAntreanRoute
   PerawatAntreanRoute: typeof PerawatAntreanRoute
-  ResepsionisAntreanRoute: typeof ResepsionisAntreanRoute
-  AntreanIndexRoute: typeof AntreanIndexRoute
   CekAntreanIndexRoute: typeof CekAntreanIndexRoute
   DisplayIndexRoute: typeof DisplayIndexRoute
   JadwalIndexRoute: typeof JadwalIndexRoute
@@ -201,11 +240,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/no-access': {
+      id: '/no-access'
+      path: '/no-access'
+      fullPath: '/no-access'
+      preLoaderRoute: typeof NoAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/403': {
+      id: '/403'
+      path: '/403'
+      fullPath: '/403'
+      preLoaderRoute: typeof R403RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$': {
@@ -243,25 +296,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CekAntreanIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/antrean/': {
-      id: '/antrean/'
-      path: '/antrean'
-      fullPath: '/antrean'
-      preLoaderRoute: typeof AntreanIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/resepsionis/antrean': {
-      id: '/resepsionis/antrean'
-      path: '/resepsionis/antrean'
-      fullPath: '/resepsionis/antrean'
-      preLoaderRoute: typeof ResepsionisAntreanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/perawat/antrean': {
       id: '/perawat/antrean'
       path: '/perawat/antrean'
       fullPath: '/perawat/antrean'
       preLoaderRoute: typeof PerawatAntreanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perawat-asisten/antrean': {
+      id: '/perawat-asisten/antrean'
+      path: '/perawat-asisten/antrean'
+      fullPath: '/perawat-asisten/antrean'
+      preLoaderRoute: typeof PerawatAsistenAntreanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/master/users': {
@@ -285,11 +331,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MasterPoliRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/master/pasien': {
+      id: '/master/pasien'
+      path: '/master/pasien'
+      fullPath: '/master/pasien'
+      preLoaderRoute: typeof MasterPasienRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dokter/antrean': {
       id: '/dokter/antrean'
       path: '/dokter/antrean'
       fullPath: '/dokter/antrean'
       preLoaderRoute: typeof DokterAntreanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administrasi/antrean': {
+      id: '/administrasi/antrean'
+      path: '/administrasi/antrean'
+      fullPath: '/administrasi/antrean'
+      preLoaderRoute: typeof AdministrasiAntreanRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -298,14 +358,17 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  R403Route: R403Route,
   LoginRoute: LoginRoute,
+  NoAccessRoute: NoAccessRoute,
+  AdministrasiAntreanRoute: AdministrasiAntreanRoute,
   DokterAntreanRoute: DokterAntreanRoute,
+  MasterPasienRoute: MasterPasienRoute,
   MasterPoliRoute: MasterPoliRoute,
   MasterRolesRoute: MasterRolesRoute,
   MasterUsersRoute: MasterUsersRoute,
+  PerawatAsistenAntreanRoute: PerawatAsistenAntreanRoute,
   PerawatAntreanRoute: PerawatAntreanRoute,
-  ResepsionisAntreanRoute: ResepsionisAntreanRoute,
-  AntreanIndexRoute: AntreanIndexRoute,
   CekAntreanIndexRoute: CekAntreanIndexRoute,
   DisplayIndexRoute: DisplayIndexRoute,
   JadwalIndexRoute: JadwalIndexRoute,

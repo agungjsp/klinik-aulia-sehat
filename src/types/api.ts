@@ -80,13 +80,13 @@ export interface ScheduleRequest {
 
 // Queue/Antrean Types
 export type QueueStatus = 
-  | "CHECKED_IN"       // Sudah daftar ulang (timestamp = urutan antrean)
-  | "IN_ANAMNESA"      // Sedang anamnesis dengan perawat
-  | "WAITING_DOCTOR"   // Selesai anamnesa, menunggu dipanggil dokter
-  | "IN_CONSULTATION"  // Sedang konsultasi dengan dokter
-  | "DONE"             // Selesai
-  | "NO_SHOW"          // Tidak hadir
-  | "CANCELLED"        // Dibatalkan
+  | "WAITING"           // Menunggu anamnesa (setelah check-in)
+  | "ANAMNESA"          // Sedang anamnesis dengan perawat
+  | "WAITING_DOCTOR"    // Selesai anamnesa, menunggu dipanggil dokter
+  | "WITH_DOCTOR"       // Sedang konsultasi dengan dokter
+  | "DONE"              // Selesai
+  | "NO_SHOW"           // Tidak hadir (3x panggil)
+  | "CANCELLED"         // Dibatalkan
 
 export interface Patient {
   id: number
@@ -95,6 +95,7 @@ export interface Patient {
   phone: string
   birth_date: string
   address?: string
+  bpjs_number?: string
   created_at: string
   updated_at: string
 }

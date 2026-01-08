@@ -9,21 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { queueService } from "@/services"
-import type { QueueStatus } from "@/types"
+import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 
 export const Route = createFileRoute("/cek-antrean/")({
   component: CekAntreanPage,
 })
-
-const statusConfig: Record<QueueStatus, { label: string; color: string }> = {
-  CHECKED_IN: { label: "Menunggu Anamnesa", color: "bg-blue-500" },
-  IN_ANAMNESA: { label: "Sedang Anamnesa", color: "bg-orange-500" },
-  WAITING_DOCTOR: { label: "Menunggu Dokter", color: "bg-purple-500" },
-  IN_CONSULTATION: { label: "Sedang Konsultasi", color: "bg-yellow-500" },
-  DONE: { label: "Selesai", color: "bg-green-500" },
-  NO_SHOW: { label: "Tidak Hadir", color: "bg-gray-500" },
-  CANCELLED: { label: "Dibatalkan", color: "bg-red-500" },
-}
 
 function CekAntreanPage() {
   const [searchCode, setSearchCode] = useState("")
@@ -84,8 +74,8 @@ function CekAntreanPage() {
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Nomor Antrean Anda</p>
               <p className="text-6xl font-bold text-blue-600 my-2">{queue.queue_number}</p>
-              <Badge className={`${statusConfig[queue.status].color} text-white`}>
-                {statusConfig[queue.status].label}
+              <Badge className={`${QUEUE_STATUS_CONFIG[queue.status].bgColor} ${QUEUE_STATUS_CONFIG[queue.status].color}`}>
+                {QUEUE_STATUS_CONFIG[queue.status].label}
               </Badge>
             </div>
 

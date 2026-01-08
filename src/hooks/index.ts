@@ -4,4 +4,4 @@ export * from "./use-user"
 export * from "./use-schedule"
 export * from "./use-queue"
 export * from "./use-voice-announcement"
-
+export * from "./use-patient"

@@ -20,17 +20,18 @@ const createHistory = (status: QueueStatus, time: string): QueueStatusHistory =>
   status, changed_at: time, changed_by: mockCurrentUser.id, changed_by_name: mockCurrentUser.name,
 })
 
+// Updated mock data with new status names
 let mockQueues: Queue[] = [
-  { id: 1, queue_number: "A001", patient_id: 1, patient: mockPatients[0], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "DONE", check_in_time: "07:30:00", anamnesa_time: "07:45:00", consultation_time: "08:05:00", done_time: "08:20:00", queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("CHECKED_IN", "07:30:00"), createHistory("DONE", "08:20:00")], created_at: "", updated_at: "" },
-  { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "IN_CONSULTATION", check_in_time: "07:35:00", anamnesa_time: "07:50:00", consultation_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("CHECKED_IN", "07:35:00"), createHistory("IN_CONSULTATION", "08:25:00")], created_at: "", updated_at: "" },
-  { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING_DOCTOR", check_in_time: "07:40:00", anamnesa_time: "08:00:00", consultation_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("CHECKED_IN", "07:40:00"), createHistory("WAITING_DOCTOR", "08:20:00")], created_at: "", updated_at: "" },
-  { id: 4, queue_number: "A004", patient_id: 4, patient: mockPatients[3], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "IN_ANAMNESA", check_in_time: "07:45:00", anamnesa_time: "08:30:00", consultation_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("CHECKED_IN", "07:45:00"), createHistory("IN_ANAMNESA", "08:30:00")], created_at: "", updated_at: "" },
-  { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "CHECKED_IN", check_in_time: "07:50:00", anamnesa_time: null, consultation_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("CHECKED_IN", "07:50:00")], created_at: "", updated_at: "" },
+  { id: 1, queue_number: "A001", patient_id: 1, patient: mockPatients[0], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "DONE", check_in_time: "07:30:00", anamnesa_time: "07:45:00", consultation_time: "08:05:00", done_time: "08:20:00", queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("WAITING", "07:30:00"), createHistory("DONE", "08:20:00")], created_at: "", updated_at: "" },
+  { id: 2, queue_number: "A002", patient_id: 2, patient: mockPatients[1], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WITH_DOCTOR", check_in_time: "07:35:00", anamnesa_time: "07:50:00", consultation_time: "08:25:00", done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("WAITING", "07:35:00"), createHistory("WITH_DOCTOR", "08:25:00")], created_at: "", updated_at: "" },
+  { id: 3, queue_number: "A003", patient_id: 3, patient: mockPatients[2], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING_DOCTOR", check_in_time: "07:40:00", anamnesa_time: "08:00:00", consultation_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("WAITING", "07:40:00"), createHistory("WAITING_DOCTOR", "08:20:00")], created_at: "", updated_at: "" },
+  { id: 4, queue_number: "A004", patient_id: 4, patient: mockPatients[3], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "ANAMNESA", check_in_time: "07:45:00", anamnesa_time: "08:30:00", consultation_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("WAITING", "07:45:00"), createHistory("ANAMNESA", "08:30:00")], created_at: "", updated_at: "" },
+  { id: 5, queue_number: "A005", patient_id: 5, patient: mockPatients[4], poly_id: 1, poly: mockPoly, doctor_id: 3, doctor: mockDoctor, schedule_id: 1, schedule: mockSchedule, status: "WAITING", check_in_time: "07:50:00", anamnesa_time: null, consultation_time: null, done_time: null, queue_date: format(new Date(), "yyyy-MM-dd"), status_history: [createHistory("WAITING", "07:50:00")], created_at: "", updated_at: "" },
 ]
 
 let nextId = 6, nextQueueNum = 6
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-const STATUS_ORDER: Record<QueueStatus, number> = { IN_CONSULTATION: 0, WAITING_DOCTOR: 1, IN_ANAMNESA: 2, CHECKED_IN: 3, DONE: 4, NO_SHOW: 5, CANCELLED: 6 }
+const STATUS_ORDER: Record<QueueStatus, number> = { WITH_DOCTOR: 0, WAITING_DOCTOR: 1, ANAMNESA: 2, WAITING: 3, DONE: 4, NO_SHOW: 5, CANCELLED: 6 }
 
 export const queueService = {
   getAll: async (params?: { date?: string; poly_id?: number; doctor_id?: number; status?: QueueStatus }): Promise<ApiResponse<Queue[]>> => {
@@ -67,10 +68,10 @@ export const queueService = {
       const now = format(new Date(), "HH:mm:ss")
       const newQueue: Queue = {
         id: nextId++, queue_number: `A${String(nextQueueNum++).padStart(3, "0")}`, patient_id: patient.id, patient, poly_id: data.poly_id, poly: mockPoly, doctor_id: data.doctor_id, doctor: mockDoctor, schedule_id: data.schedule_id, schedule: mockSchedule,
-        status: "CHECKED_IN", check_in_time: now, anamnesa_time: null, consultation_time: null, done_time: null, queue_date: data.queue_date, notes: data.notes, status_history: [createHistory("CHECKED_IN", now)], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        status: "WAITING", check_in_time: now, anamnesa_time: null, consultation_time: null, done_time: null, queue_date: data.queue_date, notes: data.notes, status_history: [createHistory("WAITING", now)], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }
       mockQueues.push(newQueue)
-      return { status: "success", data: newQueue, message: "Pasien berhasil check-in" }
+      return { status: "success", data: newQueue, message: "Pasien berhasil didaftarkan" }
     }
     throw new Error("API not implemented")
   },
@@ -83,8 +84,8 @@ export const queueService = {
       const now = format(new Date(), "HH:mm:ss")
       const queue = mockQueues[idx]
       const updates: Partial<Queue> = { status: data.status, updated_at: new Date().toISOString(), status_history: [...queue.status_history, createHistory(data.status, now)] }
-      if (data.status === "IN_ANAMNESA" && !queue.anamnesa_time) updates.anamnesa_time = now
-      if (data.status === "IN_CONSULTATION" && !queue.consultation_time) updates.consultation_time = now
+      if (data.status === "ANAMNESA" && !queue.anamnesa_time) updates.anamnesa_time = now
+      if (data.status === "WITH_DOCTOR" && !queue.consultation_time) updates.consultation_time = now
       if (data.status === "DONE" || data.status === "NO_SHOW" || data.status === "CANCELLED") updates.done_time = now
       mockQueues[idx] = { ...queue, ...updates }
       return { status: "success", data: mockQueues[idx], message: "Status berhasil diupdate" }
@@ -108,7 +109,7 @@ export const queueService = {
       const queue = mockQueues.find(q => q.queue_number.toUpperCase() === code.toUpperCase() && q.queue_date === today)
       if (!queue) return { status: "error", message: "Antrean tidak ditemukan" }
       // Calculate position (how many people ahead)
-      const activeStatuses: QueueStatus[] = ["CHECKED_IN", "IN_ANAMNESA", "WAITING_DOCTOR"]
+      const activeStatuses: QueueStatus[] = ["WAITING", "ANAMNESA", "WAITING_DOCTOR"]
       if (!activeStatuses.includes(queue.status)) return { status: "success", data: queue, position: 0 }
       const ahead = mockQueues.filter(q => 
         q.queue_date === today && 
