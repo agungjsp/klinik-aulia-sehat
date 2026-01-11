@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as R403RouteImport } from './routes/403'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LaporanIndexRouteImport } from './routes/laporan/index'
 import { Route as JadwalIndexRouteImport } from './routes/jadwal/index'
 import { Route as DisplayIndexRouteImport } from './routes/display/index'
 import { Route as CekAntreanIndexRouteImport } from './routes/cek-antrean/index'
@@ -49,6 +50,11 @@ const SplatRoute = SplatRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LaporanIndexRoute = LaporanIndexRouteImport.update({
+  id: '/laporan/',
+  path: '/laporan/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JadwalIndexRoute = JadwalIndexRouteImport.update({
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/cek-antrean': typeof CekAntreanIndexRoute
   '/display': typeof DisplayIndexRoute
   '/jadwal': typeof JadwalIndexRoute
+  '/laporan': typeof LaporanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/cek-antrean': typeof CekAntreanIndexRoute
   '/display': typeof DisplayIndexRoute
   '/jadwal': typeof JadwalIndexRoute
+  '/laporan': typeof LaporanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/cek-antrean/': typeof CekAntreanIndexRoute
   '/display/': typeof DisplayIndexRoute
   '/jadwal/': typeof JadwalIndexRoute
+  '/laporan/': typeof LaporanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/cek-antrean'
     | '/display'
     | '/jadwal'
+    | '/laporan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/cek-antrean'
     | '/display'
     | '/jadwal'
+    | '/laporan'
   id:
     | '__root__'
     | '/'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/cek-antrean/'
     | '/display/'
     | '/jadwal/'
+    | '/laporan/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   CekAntreanIndexRoute: typeof CekAntreanIndexRoute
   DisplayIndexRoute: typeof DisplayIndexRoute
   JadwalIndexRoute: typeof JadwalIndexRoute
+  LaporanIndexRoute: typeof LaporanIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -273,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/laporan/': {
+      id: '/laporan/'
+      path: '/laporan'
+      fullPath: '/laporan'
+      preLoaderRoute: typeof LaporanIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jadwal/': {
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   CekAntreanIndexRoute: CekAntreanIndexRoute,
   DisplayIndexRoute: DisplayIndexRoute,
   JadwalIndexRoute: JadwalIndexRoute,
+  LaporanIndexRoute: LaporanIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
