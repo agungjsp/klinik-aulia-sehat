@@ -4,11 +4,16 @@ import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
 import { RefreshCw, Play, AlertTriangle } from "lucide-react"
 import { useState } from "react"
-import { useQueueList, useQueueUpdateStatus } from "@/hooks"
+import {
+  useReservationList,
+  useReservationToWithDoctor,
+  useReservationToNoShow,
+  useStatusList,
+} from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Queue, QueueStatus } from "@/types"
+import type { Reservation, QueueStatusName } from "@/types"
 
 export const Route = createFileRoute("/perawat-asisten/antrean")({
   component: PerawatAsistenAntreanPage,
@@ -16,69 +21,96 @@ export const Route = createFileRoute("/perawat-asisten/antrean")({
 
 function PerawatAsistenAntreanPage() {
   const today = format(new Date(), "yyyy-MM-dd")
-  const { data: queueData, isLoading, refetch } = useQueueList({ date: today })
-  const updateStatusMutation = useQueueUpdateStatus()
+  const { data: reservationData, isLoading, refetch } = useReservationList({ date: today })
+  const { data: statusData } = useStatusList()
   
-  // Track call count per queue
+  const toWithDoctorMutation = useReservationToWithDoctor()
+  const toNoShowMutation = useReservationToNoShow()
+
+  // Track call count per reservation
   const [callCounts, setCallCounts] = useState<Record<number, number>>({})
 
-  const queues = queueData?.data || []
-  
-  // Filter only relevant queues for perawat asisten
-  const waitingDoctor = queues.filter(q => q.status === "WAITING_DOCTOR")
-  const withDoctor = queues.filter(q => q.status === "WITH_DOCTOR")
+  const reservations = reservationData?.data?.data || []
+  const statuses = statusData?.data || []
 
-  const handleCallPatient = async (queue: Queue) => {
-    const currentCount = callCounts[queue.id] || 0
+  // Get status id by name
+  const getStatusId = (statusName: QueueStatusName) => {
+    return statuses.find((s) => s.status_name === statusName)?.id
+  }
+
+  const waitingDoctorId = getStatusId("WAITING_DOCTOR")
+  const withDoctorId = getStatusId("WITH_DOCTOR")
+
+  // Filter only relevant reservations
+  const waitingDoctor = reservations.filter((r) => r.status_id === waitingDoctorId)
+  const withDoctor = reservations.filter((r) => r.status_id === withDoctorId)
+
+  const handleCallPatient = async (reservation: Reservation) => {
+    const currentCount = callCounts[reservation.id] || 0
     const newCount = currentCount + 1
-    
+
     if (newCount >= 3) {
       // 3x called, mark as no-show
       try {
-        await updateStatusMutation.mutateAsync({ id: queue.id, data: { status: "NO_SHOW" as QueueStatus } })
+        await toNoShowMutation.mutateAsync(reservation.id)
         toast.warning("Pasien tidak hadir setelah 3x panggilan")
-        setCallCounts(prev => ({ ...prev, [queue.id]: 0 }))
-      } catch (error: any) {
-        toast.error(error.response?.data?.message || "Gagal mengubah status")
+        setCallCounts((prev) => ({ ...prev, [reservation.id]: 0 }))
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } } }
+        toast.error(err.response?.data?.message || "Gagal mengubah status")
       }
     } else {
       // Update call count and trigger call
-      setCallCounts(prev => ({ ...prev, [queue.id]: newCount }))
-      
+      setCallCounts((prev) => ({ ...prev, [reservation.id]: newCount }))
+
       if (newCount === 1) {
         // First call, update status to WITH_DOCTOR
         try {
-          await updateStatusMutation.mutateAsync({ id: queue.id, data: { status: "WITH_DOCTOR" as QueueStatus } })
-          toast.success(`Memanggil pasien ${queue.patient.name}`)
-        } catch (error: any) {
-          toast.error(error.response?.data?.message || "Gagal mengubah status")
+          await toWithDoctorMutation.mutateAsync(reservation.id)
+          toast.success(`Memanggil pasien ${reservation.patient?.patient_name}`)
+        } catch (error: unknown) {
+          const err = error as { response?: { data?: { message?: string } } }
+          toast.error(err.response?.data?.message || "Gagal mengubah status")
         }
       } else {
-        toast.info(`Panggilan ke-${newCount} untuk ${queue.patient.name}`)
+        toast.info(`Panggilan ke-${newCount} untuk ${reservation.patient?.patient_name}`)
       }
     }
   }
 
-  const handleMarkNoShow = async (queue: Queue) => {
+  const handleMarkNoShow = async (reservation: Reservation) => {
     try {
-      await updateStatusMutation.mutateAsync({ id: queue.id, data: { status: "NO_SHOW" as QueueStatus } })
+      await toNoShowMutation.mutateAsync(reservation.id)
       toast.warning("Pasien ditandai tidak hadir")
-      setCallCounts(prev => ({ ...prev, [queue.id]: 0 }))
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal mengubah status")
+      setCallCounts((prev) => ({ ...prev, [reservation.id]: 0 }))
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error(err.response?.data?.message || "Gagal mengubah status")
     }
   }
 
-  const getCallCount = (queueId: number) => callCounts[queueId] || 0
+  const getCallCount = (reservationId: number) => callCounts[reservationId] || 0
+
+  // Helper to format queue number
+  const formatQueueNumber = (num: number | string | undefined) => {
+    if (num === undefined || num === null) return "--"
+    return String(num).padStart(3, "0")
+  }
+
+  const isPending = toWithDoctorMutation.isPending || toNoShowMutation.isPending
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Panggil Pasien ke Dokter</h1>
-          <p className="text-muted-foreground">{format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}</p>
+          <p className="text-muted-foreground">
+            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
+          </p>
         </div>
-        <Button variant="outline" size="icon" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /></Button>
+        <Button variant="outline" size="icon" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -94,15 +126,21 @@ function PerawatAsistenAntreanPage() {
             ) : withDoctor.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">Tidak ada pasien</p>
             ) : (
-              withDoctor.map((queue) => (
-                <div key={queue.id} className="rounded-lg border bg-green-50 p-4">
+              withDoctor.map((reservation) => (
+                <div key={reservation.id} className="rounded-lg border bg-green-50 p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-mono text-2xl font-bold text-green-700">{queue.queue_number}</p>
-                      <p className="font-medium">{queue.patient.name}</p>
-                      <p className="text-sm text-muted-foreground">{queue.poly.name} - {queue.doctor.name}</p>
+                      <p className="font-mono text-2xl font-bold text-green-700">
+                        {formatQueueNumber(reservation.queue?.queue_number)}
+                      </p>
+                      <p className="font-medium">{reservation.patient?.patient_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                      </p>
                     </div>
-                    <Badge variant="default" className="bg-green-600">Dengan Dokter</Badge>
+                    <Badge variant="default" className="bg-green-600">
+                      Dengan Dokter
+                    </Badge>
                   </div>
                 </div>
               ))
@@ -122,18 +160,26 @@ function PerawatAsistenAntreanPage() {
             ) : waitingDoctor.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">Tidak ada pasien menunggu</p>
             ) : (
-              waitingDoctor.map((queue, idx) => {
-                const callCount = getCallCount(queue.id)
-                const isDisabled = callCount >= 3
-                
+              waitingDoctor.map((reservation, idx) => {
+                const callCount = getCallCount(reservation.id)
+
                 return (
-                  <div key={queue.id} className={`rounded-lg border p-3 ${idx === 0 ? "bg-purple-50 border-purple-200" : ""}`}>
+                  <div
+                    key={reservation.id}
+                    className={`rounded-lg border p-3 ${
+                      idx === 0 ? "bg-purple-50 border-purple-200" : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-lg font-bold">{queue.queue_number}</span>
+                        <span className="font-mono text-lg font-bold">
+                          {formatQueueNumber(reservation.queue?.queue_number)}
+                        </span>
                         <div>
-                          <p className="font-medium">{queue.patient.name}</p>
-                          <p className="text-xs text-muted-foreground">{queue.poly.name} - {queue.doctor.name}</p>
+                          <p className="font-medium">{reservation.patient?.patient_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -142,22 +188,22 @@ function PerawatAsistenAntreanPage() {
                             Panggilan: {callCount}/3
                           </Badge>
                         )}
-                        {idx === 0 && !isDisabled && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleCallPatient(queue)} 
-                            disabled={updateStatusMutation.isPending}
+                        {idx === 0 && callCount < 3 && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleCallPatient(reservation)}
+                            disabled={isPending}
                           >
                             <Play className="mr-1 h-4 w-4" />
                             Panggil
                           </Button>
                         )}
                         {idx === 0 && callCount >= 2 && (
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="destructive"
-                            onClick={() => handleMarkNoShow(queue)} 
-                            disabled={updateStatusMutation.isPending}
+                            onClick={() => handleMarkNoShow(reservation)}
+                            disabled={isPending}
                           >
                             <AlertTriangle className="mr-1 h-4 w-4" />
                             No Show
