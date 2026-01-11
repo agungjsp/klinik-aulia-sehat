@@ -14,6 +14,7 @@ import {
   usePolyUpdate,
   usePolyDelete,
   usePolyRestore,
+  useDebouncedValue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,13 +50,14 @@ type PolyForm = z.infer<typeof polySchema>
 
 function PoliPage() {
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebouncedValue(search, 500)
   const [activeTab, setActiveTab] = useState<"active" | "trashed">("active")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingPoly, setEditingPoly] = useState<Poly | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [restoreId, setRestoreId] = useState<number | null>(null)
 
-  const { data: polyData, isLoading } = usePolyList(search || undefined)
+  const { data: polyData, isLoading } = usePolyList(debouncedSearch || undefined)
   const { data: trashedData, isLoading: isLoadingTrashed } = usePolyTrashed()
 
   const createMutation = usePolyCreate()

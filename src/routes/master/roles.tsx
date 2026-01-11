@@ -14,6 +14,7 @@ import {
   useRoleUpdate,
   useRoleDelete,
   useRoleRestore,
+  useDebouncedValue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,13 +50,14 @@ type RoleForm = z.infer<typeof roleSchema>
 
 function RolesPage() {
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebouncedValue(search, 500)
   const [activeTab, setActiveTab] = useState<"active" | "trashed">("active")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [restoreId, setRestoreId] = useState<number | null>(null)
 
-  const { data: roleData, isLoading } = useRoleList(search || undefined)
+  const { data: roleData, isLoading } = useRoleList(debouncedSearch || undefined)
   const { data: trashedData, isLoading: isLoadingTrashed } = useRoleTrashed()
 
   const createMutation = useRoleCreate()
