@@ -4,12 +4,17 @@ import { toast } from "sonner"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
 import { RefreshCw, Play, CheckCircle } from "lucide-react"
-import { useQueueList, useQueueUpdateStatus } from "@/hooks"
+import {
+  useReservationList,
+  useReservationToWithDoctor,
+  useReservationToDone,
+  useStatusList,
+} from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import type { Queue, QueueStatus } from "@/types"
+import type { Reservation, QueueStatusName } from "@/types"
 
 export const Route = createFileRoute("/dokter/antrean")({
   component: DokterAntreanPage,
@@ -17,60 +22,83 @@ export const Route = createFileRoute("/dokter/antrean")({
 
 function DokterAntreanPage() {
   const today = format(new Date(), "yyyy-MM-dd")
-  const { data: queueData, isLoading, refetch } = useQueueList({ date: today })
-  const updateStatusMutation = useQueueUpdateStatus()
+  const { data: reservationData, isLoading, refetch } = useReservationList({ date: today })
+  const { data: statusData } = useStatusList()
+
+  const toWithDoctorMutation = useReservationToWithDoctor()
+  const toDoneMutation = useReservationToDone()
 
   // Confirmation state
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [pendingAction, setPendingAction] = useState<{ queue: Queue; status: QueueStatus; title: string; description: string } | null>(null)
+  const [pendingAction, setPendingAction] = useState<{
+    reservation: Reservation
+    action: "withdoctor" | "done"
+    title: string
+    description: string
+  } | null>(null)
 
-  const queues = queueData?.data || []
-  
+  const reservations = reservationData?.data?.data || []
+  const statuses = statusData?.data || []
+
+  // Get status id by name
+  const getStatusId = (statusName: QueueStatusName) => {
+    return statuses.find((s) => s.status_name === statusName)?.id
+  }
+
+  const waitingDoctorId = getStatusId("WAITING_DOCTOR")
+  const withDoctorId = getStatusId("WITH_DOCTOR")
+
   // Filter only relevant queues for dokter
-  const waitingDoctor = queues.filter(q => q.status === "WAITING_DOCTOR")
-  const inConsultation = queues.filter(q => q.status === "WITH_DOCTOR")
+  const waitingDoctor = reservations.filter((r) => r.status_id === waitingDoctorId)
+  const inConsultation = reservations.filter((r) => r.status_id === withDoctorId)
 
-  const handleUpdateStatus = (queue: Queue, newStatus: QueueStatus) => {
-    let title = "Konfirmasi"
-    let description = "Apakah Anda yakin?"
-
-    if (newStatus === "WITH_DOCTOR") {
-      title = "Panggil Pasien"
-      description = `Panggil pasien ${queue.patient.name} ke ruang konsultasi?`
-    } else if (newStatus === "DONE") {
-      title = "Selesai Konsultasi"
-      description = `Selesaikan konsultasi untuk pasien ${queue.patient.name}?`
-    }
-
-    setPendingAction({ queue, status: newStatus, title, description })
+  const handleAction = (
+    reservation: Reservation,
+    action: "withdoctor" | "done",
+    title: string,
+    description: string
+  ) => {
+    setPendingAction({ reservation, action, title, description })
     setConfirmOpen(true)
   }
 
-  const confirmUpdateStatus = async () => {
+  const confirmAction = async () => {
     if (!pendingAction) return
 
     try {
-      await updateStatusMutation.mutateAsync({ id: pendingAction.queue.id, data: { status: pendingAction.status } })
-      toast.success(pendingAction.status === "WITH_DOCTOR" ? "Pasien dipanggil untuk konsultasi" : "Konsultasi selesai")
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal mengubah status")
+      if (pendingAction.action === "withdoctor") {
+        await toWithDoctorMutation.mutateAsync(pendingAction.reservation.id)
+        toast.success("Pasien dipanggil untuk konsultasi")
+      } else {
+        await toDoneMutation.mutateAsync(pendingAction.reservation.id)
+        toast.success("Konsultasi selesai")
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error(err.response?.data?.message || "Gagal mengubah status")
     } finally {
       setConfirmOpen(false)
       setPendingAction(null)
     }
   }
 
-  // Helper to format queue number (remove letters)
-  const formatQueueNumber = (num: string) => num.replace(/\D/g, '')
+  // Helper to format queue number
+  const formatQueueNumber = (num: number | string) => String(num).padStart(3, "0")
+
+  const isPending = toWithDoctorMutation.isPending || toDoneMutation.isPending
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Antrean Pasien</h1>
-          <p className="text-muted-foreground">{format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}</p>
+          <p className="text-muted-foreground">
+            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
+          </p>
         </div>
-        <Button variant="outline" size="icon" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /></Button>
+        <Button variant="outline" size="icon" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -86,17 +114,34 @@ function DokterAntreanPage() {
             ) : inConsultation.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">Tidak ada pasien</p>
             ) : (
-              inConsultation.map((queue) => (
-                <div key={queue.id} className="rounded-lg border bg-yellow-50 p-4">
+              inConsultation.map((reservation) => (
+                <div key={reservation.id} className="rounded-lg border bg-yellow-50 p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-mono text-2xl font-bold text-yellow-700">{formatQueueNumber(queue.queue_number)}</p>
-                      <p className="font-medium">{queue.patient.name}</p>
-                      <p className="text-sm text-muted-foreground">{queue.poly.name}</p>
-                      {queue.notes && <p className="text-sm mt-2 text-muted-foreground">Catatan: {queue.notes}</p>}
+                      <p className="font-mono text-2xl font-bold text-yellow-700">
+                        {reservation.queue?.queue_number
+                          ? formatQueueNumber(reservation.queue.queue_number)
+                          : "-"}
+                      </p>
+                      <p className="font-medium">{reservation.patient?.patient_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                      </p>
                     </div>
-                    <Button size="sm" onClick={() => handleUpdateStatus(queue, "DONE")} disabled={updateStatusMutation.isPending}>
-                      <CheckCircle className="mr-1 h-4 w-4" />Selesai
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        handleAction(
+                          reservation,
+                          "done",
+                          "Selesai Konsultasi",
+                          `Selesaikan konsultasi untuk pasien ${reservation.patient?.patient_name}?`
+                        )
+                      }
+                      disabled={isPending}
+                    >
+                      <CheckCircle className="mr-1 h-4 w-4" />
+                      Selesai
                     </Button>
                   </div>
                 </div>
@@ -117,18 +162,41 @@ function DokterAntreanPage() {
             ) : waitingDoctor.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">Tidak ada pasien menunggu</p>
             ) : (
-              waitingDoctor.map((queue, idx) => (
-                <div key={queue.id} className={`rounded-lg border p-3 flex items-center justify-between ${idx === 0 ? "bg-purple-50 border-purple-200" : ""}`}>
+              waitingDoctor.map((reservation, idx) => (
+                <div
+                  key={reservation.id}
+                  className={`rounded-lg border p-3 flex items-center justify-between ${
+                    idx === 0 ? "bg-purple-50 border-purple-200" : ""
+                  }`}
+                >
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-lg font-bold">{formatQueueNumber(queue.queue_number)}</span>
+                    <span className="font-mono text-lg font-bold">
+                      {reservation.queue?.queue_number
+                        ? formatQueueNumber(reservation.queue.queue_number)
+                        : "-"}
+                    </span>
                     <div>
-                      <p className="font-medium">{queue.patient.name}</p>
-                      <p className="text-xs text-muted-foreground">Selesai anamnesa: {queue.anamnesa_time?.slice(0, 5) || "-"}</p>
+                      <p className="font-medium">{reservation.patient?.patient_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Selesai anamnesa: {reservation.queue?.call_time?.slice(0, 5) || "-"}
+                      </p>
                     </div>
                   </div>
                   {idx === 0 && (
-                    <Button size="sm" onClick={() => handleUpdateStatus(queue, "WITH_DOCTOR")} disabled={updateStatusMutation.isPending}>
-                      <Play className="mr-1 h-4 w-4" />Panggil
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        handleAction(
+                          reservation,
+                          "withdoctor",
+                          "Panggil Pasien",
+                          `Panggil pasien ${reservation.patient?.patient_name} ke ruang konsultasi?`
+                        )
+                      }
+                      disabled={isPending}
+                    >
+                      <Play className="mr-1 h-4 w-4" />
+                      Panggil
                     </Button>
                   )}
                   {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
@@ -144,7 +212,7 @@ function DokterAntreanPage() {
         onOpenChange={setConfirmOpen}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
-        onConfirm={confirmUpdateStatus}
+        onConfirm={confirmAction}
       />
     </div>
   )

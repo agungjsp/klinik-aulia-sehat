@@ -14,6 +14,7 @@ import {
   useUserRestore,
   useRoleList,
   usePolyList,
+  useDebouncedValue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,13 +81,14 @@ type UserUpdateForm = z.infer<typeof userUpdateSchema>
 
 function UsersPage() {
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebouncedValue(search, 500)
   const [activeTab, setActiveTab] = useState<"active" | "trashed">("active")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [restoreId, setRestoreId] = useState<number | null>(null)
 
-  const { data: userData, isLoading } = useUserList({ search: search || undefined })
+  const { data: userData, isLoading } = useUserList({ search: debouncedSearch || undefined })
   const { data: trashedData, isLoading: isLoadingTrashed } = useUserTrashed()
   const { data: rolesData } = useRoleList()
   const { data: polyData } = usePolyList()

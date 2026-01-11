@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { patientService, type PatientCreateRequest, type PatientUpdateRequest, type PatientSearchParams } from "@/services/patient"
+import { patientService, type PatientCreateRequest, type PatientSearchParams, type PatientUpdateRequest } from "@/services/patient"
 
 export const patientKeys = {
   all: ["patient"] as const,
@@ -12,6 +12,14 @@ export function usePatientList(params?: PatientSearchParams) {
   return useQuery({
     queryKey: patientKeys.list(params),
     queryFn: () => patientService.getAll(params),
+  })
+}
+
+export function usePatientDetail(id: number | null) {
+  return useQuery({
+    queryKey: patientKeys.detail(id!),
+    queryFn: () => patientService.getById(id!),
+    enabled: id !== null,
   })
 }
 

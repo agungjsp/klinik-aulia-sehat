@@ -2,11 +2,10 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useState, useMemo } from "react"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { useQueueList } from "@/hooks"
+import { useReservationList, useStatusList } from "@/hooks"
 import { Clock, Activity, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getUniquePolis, groupQueuesByPoly } from "@/lib/queue-display"
-import type { Queue, Poly } from "@/types"
+import type { Poly, Reservation, QueueStatusName } from "@/types"
 
 export const Route = createFileRoute("/display/")({
   component: DisplayPage,
@@ -14,7 +13,8 @@ export const Route = createFileRoute("/display/")({
 
 function DisplayPage() {
   const today = format(new Date(), "yyyy-MM-dd")
-  const { data: queueData, refetch } = useQueueList({ date: today })
+  const { data: reservationData, refetch } = useReservationList({ date: today })
+  const { data: statusData } = useStatusList()
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -25,35 +25,41 @@ function DisplayPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       refetch()
-    }, 5000)
+    }, 5000) // Refresh every 5 seconds
     return () => clearInterval(interval)
   }, [refetch])
 
-  // ============================================
-  // MOCK DATA FOR PREVIEW - Remove when BE ready
-  // ============================================
-  const USE_MOCK_DATA = true // Set to false when backend is ready
-  
-  const mockQueues: Queue[] = [
-    // Poli Umum
-    { id: 1, queue_number: "3", status: "WITH_DOCTOR", patient: { id: 1, name: "Siti Nurhaliza", nik: "1234567890123456", phone: "081234567890", birth_date: "1990-01-01", created_at: "", updated_at: "" }, patient_id: 1, poly: { id: 1, name: "Poli Umum", created_at: "", updated_at: "", deleted_at: null }, poly_id: 1, doctor: { id: 1, name: "Dr. Andi Wijaya", username: "", email: "", poly_id: 1, poly: null, roles: [] }, doctor_id: 1, schedule_id: 1, schedule: { id: 1, doctor_id: 1, date: today, start_time: "08:00", end_time: "12:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:30", anamnesa_time: "07:45", consultation_time: "08:00", done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    { id: 2, queue_number: "4", status: "ANAMNESA", patient: { id: 2, name: "Budi Santoso", nik: "1234567890123457", phone: "081234567891", birth_date: "1985-05-15", created_at: "", updated_at: "" }, patient_id: 2, poly: { id: 1, name: "Poli Umum", created_at: "", updated_at: "", deleted_at: null }, poly_id: 1, doctor: { id: 1, name: "Dr. Andi Wijaya", username: "", email: "", poly_id: 1, poly: null, roles: [] }, doctor_id: 1, schedule_id: 1, schedule: { id: 1, doctor_id: 1, date: today, start_time: "08:00", end_time: "12:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:35", anamnesa_time: "08:05", consultation_time: null, done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    { id: 3, queue_number: "5", status: "WAITING", patient: { id: 3, name: "Agus Hermanto", nik: "1234567890123458", phone: "081234567892", birth_date: "1978-10-20", created_at: "", updated_at: "" }, patient_id: 3, poly: { id: 1, name: "Poli Umum", created_at: "", updated_at: "", deleted_at: null }, poly_id: 1, doctor: { id: 1, name: "Dr. Andi Wijaya", username: "", email: "", poly_id: 1, poly: null, roles: [] }, doctor_id: 1, schedule_id: 1, schedule: { id: 1, doctor_id: 1, date: today, start_time: "08:00", end_time: "12:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:40", anamnesa_time: null, consultation_time: null, done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    { id: 4, queue_number: "6", status: "WAITING_DOCTOR", patient: { id: 4, name: "Dewi Lestari", nik: "1234567890123459", phone: "081234567893", birth_date: "1992-03-25", created_at: "", updated_at: "" }, patient_id: 4, poly: { id: 1, name: "Poli Umum", created_at: "", updated_at: "", deleted_at: null }, poly_id: 1, doctor: { id: 1, name: "Dr. Andi Wijaya", username: "", email: "", poly_id: 1, poly: null, roles: [] }, doctor_id: 1, schedule_id: 1, schedule: { id: 1, doctor_id: 1, date: today, start_time: "08:00", end_time: "12:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:42", anamnesa_time: "07:55", consultation_time: null, done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    { id: 8, queue_number: "7", status: "WAITING", patient: { id: 8, name: "Kartini Rahayu", nik: "1234567890123463", phone: "081234567897", birth_date: "1955-04-21", created_at: "", updated_at: "" }, patient_id: 8, poly: { id: 1, name: "Poli Umum", created_at: "", updated_at: "", deleted_at: null }, poly_id: 1, doctor: { id: 1, name: "Dr. Andi Wijaya", username: "", email: "", poly_id: 1, poly: null, roles: [] }, doctor_id: 1, schedule_id: 1, schedule: { id: 1, doctor_id: 1, date: today, start_time: "08:00", end_time: "12:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:50", anamnesa_time: null, consultation_time: null, done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    // Poli Gigi
-    { id: 5, queue_number: "2", status: "WITH_DOCTOR", patient: { id: 5, name: "Hendra Wijaya", nik: "1234567890123460", phone: "081234567894", birth_date: "1988-07-12", created_at: "", updated_at: "" }, patient_id: 5, poly: { id: 2, name: "Poli Gigi", created_at: "", updated_at: "", deleted_at: null }, poly_id: 2, doctor: { id: 2, name: "drg. Gigi Susanto", username: "", email: "", poly_id: 2, poly: null, roles: [] }, doctor_id: 2, schedule_id: 2, schedule: { id: 2, doctor_id: 2, date: today, start_time: "08:00", end_time: "14:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:15", anamnesa_time: "07:30", consultation_time: "07:50", done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    { id: 6, queue_number: "3", status: "ANAMNESA", patient: { id: 6, name: "Rendra Kusuma", nik: "1234567890123461", phone: "081234567895", birth_date: "1995-11-08", created_at: "", updated_at: "" }, patient_id: 6, poly: { id: 2, name: "Poli Gigi", created_at: "", updated_at: "", deleted_at: null }, poly_id: 2, doctor: { id: 2, name: "drg. Gigi Susanto", username: "", email: "", poly_id: 2, poly: null, roles: [] }, doctor_id: 2, schedule_id: 2, schedule: { id: 2, doctor_id: 2, date: today, start_time: "08:00", end_time: "14:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:18", anamnesa_time: "08:10", consultation_time: null, done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-    { id: 7, queue_number: "4", status: "WAITING", patient: { id: 7, name: "Maya Sari", nik: "1234567890123462", phone: "081234567896", birth_date: "2000-02-14", created_at: "", updated_at: "" }, patient_id: 7, poly: { id: 2, name: "Poli Gigi", created_at: "", updated_at: "", deleted_at: null }, poly_id: 2, doctor: { id: 2, name: "drg. Gigi Susanto", username: "", email: "", poly_id: 2, poly: null, roles: [] }, doctor_id: 2, schedule_id: 2, schedule: { id: 2, doctor_id: 2, date: today, start_time: "08:00", end_time: "14:00", created_at: "", updated_at: "", deleted_at: null }, check_in_time: "07:25", anamnesa_time: null, consultation_time: null, done_time: null, queue_date: today, status_history: [], created_at: "", updated_at: "" },
-  ]
+  const reservations = reservationData?.data?.data || []
+  const statuses = statusData?.data || []
 
-  const realQueues = queueData?.data || []
-  const queues = USE_MOCK_DATA ? mockQueues : realQueues
-  // ============================================
-  
-  // Get unique polis and group queues
-  const polis = useMemo(() => getUniquePolis(queues), [queues])
-  const queuesByPoly = useMemo(() => groupQueuesByPoly(queues), [queues])
+  // Get status id by name
+  const getStatusId = (statusName: QueueStatusName) => {
+    return statuses.find((s) => s.status_name === statusName)?.id
+  }
+
+  // Get unique polis
+  const polis = useMemo(() => {
+    const polyMap = new Map<number, Poly>()
+    for (const reservation of reservations) {
+      if (reservation.poly && !polyMap.has(reservation.poly.id)) {
+        polyMap.set(reservation.poly.id, reservation.poly)
+      }
+    }
+    return Array.from(polyMap.values())
+  }, [reservations])
+
+  // Group reservations by poly
+  const reservationsByPoly = useMemo(() => {
+    const grouped = new Map<number, Reservation[]>()
+    for (const reservation of reservations) {
+      const polyId = reservation.poly_id
+      if (!grouped.has(polyId)) {
+        grouped.set(polyId, [])
+      }
+      grouped.get(polyId)!.push(reservation)
+    }
+    return grouped
+  }, [reservations])
 
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-900 overflow-hidden font-sans text-white">
@@ -110,7 +116,8 @@ function DisplayPage() {
               <PolySectionSeniorFriendly 
                 key={poly.id} 
                 poly={poly} 
-                queues={queuesByPoly.get(poly.id) || []}
+                reservations={reservationsByPoly.get(poly.id) || []}
+                getStatusId={getStatusId}
               />
             ))}
           </div>
@@ -168,15 +175,34 @@ function DisplayPage() {
 // ============================================
 interface PolySectionProps {
   poly: Poly
-  queues: Queue[]
+  reservations: Reservation[]
+  getStatusId: (statusName: QueueStatusName) => number | undefined
 }
 
-function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
-  const inConsultation = queues.find(q => q.status === "WITH_DOCTOR")
-  const inAnamnesa = queues.find(q => q.status === "ANAMNESA")
-  const waiting = queues
-    .filter(q => ["WAITING", "WAITING_DOCTOR"].includes(q.status))
+function PolySectionSeniorFriendly({ poly, reservations, getStatusId }: PolySectionProps) {
+  const withDoctorId = getStatusId("WITH_DOCTOR")
+  const anamnesaId = getStatusId("ANAMNESA")
+  const waitingId = getStatusId("WAITING")
+  const waitingDoctorId = getStatusId("WAITING_DOCTOR")
+  const doneId = getStatusId("DONE")
+  const noShowId = getStatusId("NO_SHOW")
+  const cancelledId = getStatusId("CANCELLED")
+
+  const inConsultation = reservations.find((r) => r.status_id === withDoctorId)
+  const inAnamnesa = reservations.find((r) => r.status_id === anamnesaId)
+  const waiting = reservations
+    .filter((r) => r.status_id === waitingId || r.status_id === waitingDoctorId)
     .slice(0, 4) // Show max 4 waiting
+
+  const activeCount = reservations.filter(
+    (r) => ![doneId, noShowId, cancelledId].includes(r.status_id)
+  ).length
+
+  // Helper to format queue number
+  const formatQueueNumber = (num: number | string | undefined) => {
+    if (num === undefined || num === null) return "--"
+    return String(num).padStart(3, "0")
+  }
 
   return (
     <div className="h-full flex flex-col rounded-2xl bg-slate-800 overflow-hidden border-2 border-slate-700">
@@ -184,7 +210,7 @@ function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
       <div className="flex items-center justify-between px-6 py-4 bg-slate-700 border-b-2 border-slate-600">
         <h2 className="text-2xl font-bold text-white">{poly.name}</h2>
         <span className="text-sm bg-emerald-500 px-3 py-1 rounded-full">
-          {queues.filter(q => !["DONE", "NO_SHOW", "CANCELLED"].includes(q.status)).length} antrean
+          {activeCount} antrean
         </span>
       </div>
 
@@ -197,7 +223,7 @@ function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
             </p>
             {inConsultation ? (
               <p className="text-2xl font-bold text-white line-clamp-1">
-                {inConsultation.patient.name}
+                {inConsultation.patient?.patient_name || "-"}
               </p>
             ) : (
               <p className="text-xl text-emerald-200">-</p>
@@ -206,7 +232,7 @@ function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
           {/* NOMOR BESAR DI KANAN */}
           <div className="text-right">
             <p className="text-[120px] leading-none font-black text-white drop-shadow-lg">
-              {inConsultation?.queue_number || "--"}
+              {formatQueueNumber(inConsultation?.queue?.queue_number)}
             </p>
           </div>
         </div>
@@ -219,7 +245,7 @@ function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
             </p>
             {inAnamnesa ? (
               <p className="text-lg font-bold text-white line-clamp-1">
-                {inAnamnesa.patient.name}
+                {inAnamnesa.patient?.patient_name || "-"}
               </p>
             ) : (
               <p className="text-lg text-blue-200">-</p>
@@ -228,7 +254,7 @@ function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
           {/* NOMOR BESAR DI KANAN */}
           <div className="text-right">
             <p className="text-7xl font-black text-white">
-              {inAnamnesa?.queue_number || "--"}
+              {formatQueueNumber(inAnamnesa?.queue?.queue_number)}
             </p>
           </div>
         </div>
@@ -242,23 +268,23 @@ function PolySectionSeniorFriendly({ poly, queues }: PolySectionProps) {
             <p className="text-lg text-slate-500">Tidak ada antrean</p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {waiting.map((q, i) => (
+              {waiting.map((r, i) => (
                 <div 
-                  key={q.id} 
+                  key={r.id} 
                   className={cn(
                     "flex items-center justify-between p-3 rounded-lg",
                     i === 0 ? "bg-yellow-500/20 border border-yellow-500" : "bg-slate-600"
                   )}
                 >
                   <span className="text-lg text-slate-300 truncate max-w-[120px]">
-                    {q.patient.name.split(" ")[0]}
+                    {r.patient?.patient_name?.split(" ")[0] || "-"}
                   </span>
                   {/* Nomor di KANAN */}
                   <span className={cn(
                     "text-3xl font-black",
                     i === 0 ? "text-yellow-400" : "text-slate-300"
                   )}>
-                    {q.queue_number}
+                    {formatQueueNumber(r.queue?.queue_number)}
                   </span>
                 </div>
               ))}
