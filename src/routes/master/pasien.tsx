@@ -78,8 +78,8 @@ function PasienPage() {
     }
   })
 
-  // Access the nested data array from paginated response
-  const patients = patientData?.data?.data || []
+  // Access the data array from paginated response
+  const patients = patientData?.data || []
 
   return (
     <div className="space-y-6">
