@@ -14,12 +14,10 @@ export interface PatientCreateRequest {
 }
 
 export interface PatientUpdateRequest {
-  name?: string
-  nik?: string
-  phone?: string
-  birth_date?: string
-  address?: string
-  bpjs_number?: string
+  patient_name: string
+  whatsapp_number: string
+  no_bpjs?: string | null
+  email?: string | null
 }
 
 export interface PatientSearchParams {
