@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios"
-import type { ApiResponse, PaginatedResponse, Patient } from "@/types"
+import type { ApiResponse, PaginatedDataResponse, Patient } from "@/types"
 
 // ============================================
 // REQUEST INTERFACES
@@ -31,8 +31,8 @@ export interface PatientSearchParams {
 // PATIENT SERVICE
 // ============================================
 export const patientService = {
-  getAll: async (params?: PatientSearchParams): Promise<PaginatedResponse<Patient>> => {
-    const response = await api.get<PaginatedResponse<Patient>>("/api/patients", { params })
+  getAll: async (params?: PatientSearchParams): Promise<PaginatedDataResponse<Patient>> => {
+    const response = await api.get<PaginatedDataResponse<Patient>>("/api/patients", { params })
     return response.data
   },
 
