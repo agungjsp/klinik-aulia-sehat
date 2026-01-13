@@ -41,10 +41,25 @@ export const reservationService = {
   },
 
   // Convenience methods for each transition
-  toAnamnesa: async (id: number) => reservationService.transition(id, "anamnesa"),
-  toWaitingDoctor: async (id: number) => reservationService.transition(id, "waitingdoctor"),
-  toWithDoctor: async (id: number) => reservationService.transition(id, "withdoctor"),
-  toDone: async (id: number) => reservationService.transition(id, "done"),
-  toNoShow: async (id: number) => reservationService.transition(id, "noshow"),
+  toAnamnesa: async (id: number) => {
+    const response = await api.patch<ReservationTransitionResponse>(`/api/queue/${id}/anamnesa`)
+    return response.data
+  },
+  toWaitingDoctor: async (id: number) => {
+    const response = await api.patch<ReservationTransitionResponse>(`/api/queue/${id}/waitingdoctor`)
+    return response.data
+  },
+  toWithDoctor: async (id: number) => {
+    const response = await api.patch<ReservationTransitionResponse>(`/api/queue/${id}/withdoctor`)
+    return response.data
+  },
+  toDone: async (id: number) => {
+    const response = await api.patch<ReservationTransitionResponse>(`/api/queue/${id}/done`)
+    return response.data
+  },
+  toNoShow: async (id: number) => {
+    const response = await api.patch<ReservationTransitionResponse>(`/api/queue/${id}/noshow`)
+    return response.data
+  },
   toCancelled: async (id: number) => reservationService.transition(id, "cancelled"),
 }

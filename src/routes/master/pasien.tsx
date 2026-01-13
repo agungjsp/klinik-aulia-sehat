@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { Patient } from "@/types"
 
 export const Route = createFileRoute("/master/pasien")({
@@ -73,8 +74,7 @@ function PasienPage() {
       setIsFormOpen(false)
       reset()
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Terjadi kesalahan")
+      toast.error(getApiErrorMessage(error))
     }
   })
 

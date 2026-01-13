@@ -36,6 +36,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { Poly } from "@/types"
 
 export const Route = createFileRoute("/master/poli")({
@@ -97,8 +98,8 @@ function PoliPage() {
       }
       setIsFormOpen(false)
       reset()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Terjadi kesalahan")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   })
 
@@ -108,8 +109,8 @@ function PoliPage() {
       await deleteMutation.mutateAsync(deleteId)
       toast.success("Poli berhasil dihapus")
       setDeleteId(null)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menghapus poli")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   }
 
@@ -119,8 +120,8 @@ function PoliPage() {
       await restoreMutation.mutateAsync(restoreId)
       toast.success("Poli berhasil direstore")
       setRestoreId(null)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal merestore poli")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   }
 

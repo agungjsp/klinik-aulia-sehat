@@ -1,32 +1,73 @@
-import { useState } from "react"
-import { createFileRoute } from "@tanstack/react-router"
+import { useState, useEffect } from "react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { id as localeId } from "date-fns/locale"
-import { RefreshCw, Play, CheckCircle } from "lucide-react"
+import { Play, CheckCircle } from "lucide-react"
 import {
   useReservationList,
   useReservationToWithDoctor,
   useReservationToDone,
   useStatusList,
+  usePolyList,
+  useRealtimeQueue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { AntreanHeader } from "@/components/antrean"
+import { useAuthStore } from "@/stores/auth"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { Reservation, QueueStatusName } from "@/types"
+
+const antreanSearchSchema = z.object({
+  polyId: z.number().optional(),
+  date: z.string().optional(),
+})
 
 export const Route = createFileRoute("/dokter/antrean")({
   component: DokterAntreanPage,
+  validateSearch: antreanSearchSchema,
 })
 
 function DokterAntreanPage() {
+  const navigate = useNavigate({ from: "/dokter/antrean" })
+  const search = Route.useSearch() ?? {}
+  const { user } = useAuthStore()
   const today = format(new Date(), "yyyy-MM-dd")
-  const { data: reservationData, isLoading, refetch } = useReservationList({ date: today })
+
+  // Get selected poly/date from search params or defaults
+  const selectedPolyId = search.polyId ?? (user?.poly_id ?? null)
+  const selectedDate = search.date ?? today
+
+  // Fetch reservations for selected date
+  const { data: reservationData, isLoading, refetch } = useReservationList({ date: selectedDate })
   const { data: statusData } = useStatusList()
+  const { data: polyData } = usePolyList()
+
+  // Realtime updates for selected poly
+  useRealtimeQueue({
+    polyId: selectedPolyId ?? 0,
+    enabled: selectedPolyId !== null,
+  })
 
   const toWithDoctorMutation = useReservationToWithDoctor()
   const toDoneMutation = useReservationToDone()
+
+  // Set default poly if not set and we have polies
+  const polies = polyData?.data || []
+  useEffect(() => {
+    if (!selectedPolyId && polies.length > 0 && !search.polyId) {
+      const defaultPolyId = user?.poly_id ?? polies[0]?.id
+      if (defaultPolyId) {
+        navigate({
+          search: (prev) => ({ ...prev, polyId: defaultPolyId }),
+          replace: true,
+        })
+      }
+    }
+  }, [selectedPolyId, polies, user?.poly_id, navigate, search.polyId])
 
   // Confirmation state
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -37,8 +78,13 @@ function DokterAntreanPage() {
     description: string
   } | null>(null)
 
-  const reservations = reservationData?.data?.data || []
+  const allReservations = reservationData?.data?.data || []
   const statuses = statusData?.data || []
+
+  // Filter reservations by selected poly
+  const reservations = selectedPolyId
+    ? allReservations.filter((r) => r.poly_id === selectedPolyId)
+    : allReservations
 
   // Get status id by name
   const getStatusId = (statusName: QueueStatusName) => {
@@ -51,6 +97,17 @@ function DokterAntreanPage() {
   // Filter only relevant queues for dokter
   const waitingDoctor = reservations.filter((r) => r.status_id === waitingDoctorId)
   const inConsultation = reservations.filter((r) => r.status_id === withDoctorId)
+
+  // Handle poly change from header
+  const handlePolyChange = (polyId: number | null) => {
+    navigate({
+      search: (prev) => ({ ...prev, polyId: polyId ?? undefined }),
+    })
+  }
+
+  const handleRefresh = () => {
+    refetch()
+  }
 
   const handleAction = (
     reservation: Reservation,
@@ -74,8 +131,7 @@ function DokterAntreanPage() {
         toast.success("Konsultasi selesai")
       }
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Gagal mengubah status")
+      toast.error(getApiErrorMessage(error))
     } finally {
       setConfirmOpen(false)
       setPendingAction(null)
@@ -89,17 +145,16 @@ function DokterAntreanPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Antrean Pasien</h1>
-          <p className="text-muted-foreground">
-            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
-          </p>
-        </div>
-        <Button variant="outline" size="icon" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* Shared Header */}
+      <AntreanHeader
+        title="Antrean Pasien"
+        date={selectedDate}
+        selectedPolyId={selectedPolyId}
+        reservations={allReservations}
+        onPolyChange={handlePolyChange}
+        onRefresh={handleRefresh}
+        showPolySelector={true}
+      />
 
       <div className="grid grid-cols-2 gap-6">
         {/* Sedang Konsultasi */}

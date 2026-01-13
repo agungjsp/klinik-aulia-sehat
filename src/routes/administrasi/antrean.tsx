@@ -1,12 +1,12 @@
-import { useState, useMemo } from "react"
-import { createFileRoute } from "@tanstack/react-router"
+import { useState, useMemo, useEffect } from "react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
-import { RefreshCw, XCircle, Plus, CheckCircle, Filter, Users, Clock, Activity, AlertTriangle, CalendarDays } from "lucide-react"
+import { XCircle, Plus, Filter, AlertTriangle, CalendarDays } from "lucide-react"
 import {
   useReservationList,
   useReservationCreate,
@@ -15,6 +15,7 @@ import {
   usePolyList,
   useScheduleList,
   useStatusList,
+  useRealtimeQueue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,14 +26,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Card, CardContent } from "@/components/ui/card"
 import { SchedulePicker, SelectedScheduleSummary } from "@/components/schedule"
+import { AntreanHeader } from "@/components/antrean"
+import { useAuthStore } from "@/stores/auth"
 import { cn } from "@/lib/utils"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { Reservation, QueueStatusName, Schedule } from "@/types"
+
+const antreanSearchSchema = z.object({
+  polyId: z.number().optional(),
+  date: z.string().optional(),
+  scheduleId: z.number().optional(),
+})
 
 export const Route = createFileRoute("/administrasi/antrean")({
   component: AdministrasiAntreanPage,
+  validateSearch: antreanSearchSchema,
 })
 
 // Registration form schema - schedule_id is now REQUIRED
@@ -51,18 +61,47 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 
 function AdministrasiAntreanPage() {
+  const navigate = useNavigate({ from: "/administrasi/antrean" })
+  const search = Route.useSearch() ?? {}
+  const { user } = useAuthStore()
   const today = format(new Date(), "yyyy-MM-dd")
 
-  // Fetch reservations for today
-  const { data: reservationData, isLoading, refetch } = useReservationList({ date: today })
+  // Get selected poly/date from search params or defaults
+  const selectedPolyId = search.polyId ?? (user?.poly_id ?? null)
+  const selectedDate = search.date ?? today
+  const selectedScheduleId = search.scheduleId ?? null
+
+  // Fetch reservations for selected date
+  const { data: reservationData, isLoading, refetch } = useReservationList({ date: selectedDate })
   const { data: statusData } = useStatusList()
+  const { data: polyData, isLoading: polyLoading } = usePolyList()
+
+  // Realtime updates for selected poly
+  useRealtimeQueue({
+    polyId: selectedPolyId ?? 0,
+    enabled: selectedPolyId !== null,
+  })
 
   // Create mutation
   const createReservationMutation = useReservationCreate()
   const noShowMutation = useReservationToNoShow()
   const cancelledMutation = useReservationToCancelled()
 
-  // Filter state
+  // Set default poly if not set and we have polies
+  const polies = polyData?.data || []
+  useEffect(() => {
+    if (!selectedPolyId && polies.length > 0 && !search.polyId) {
+      const defaultPolyId = user?.poly_id ?? polies[0]?.id
+      if (defaultPolyId) {
+        navigate({
+          search: (prev) => ({ ...prev, polyId: defaultPolyId }),
+          replace: true,
+        })
+      }
+    }
+  }, [selectedPolyId, polies, user?.poly_id, navigate, search.polyId])
+
+  // Filter state (for list view, can still show "all")
   const [filterPoly, setFilterPoly] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
 
@@ -78,11 +117,10 @@ function AdministrasiAntreanPage() {
   // Registration form state
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [showSchedulePicker, setShowSchedulePicker] = useState(false)
-  const { data: polyData, isLoading: polyLoading } = usePolyList()
   const { data: scheduleData, isLoading: scheduleLoading } = useScheduleList({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
-    date: today, // Only today's schedules
+    month: new Date(selectedDate).getMonth() + 1,
+    year: new Date(selectedDate).getFullYear(),
+    date: selectedDate,
   })
 
   const {
@@ -97,23 +135,22 @@ function AdministrasiAntreanPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       bpjs: false,
-      date: today,
+      date: selectedDate,
     },
   })
 
-  const selectedPolyId = watch("poly_id")
-  const selectedScheduleId = watch("schedule_id")
+  const formPolyId = watch("poly_id")
+  const formScheduleId = watch("schedule_id")
   const isBpjs = watch("bpjs")
   const schedules = scheduleData?.data || []
-  const filteredSchedules = selectedPolyId
-    ? schedules.filter((s: Schedule) => s.doctor?.poly_id === selectedPolyId && s.date === today)
+  const filteredSchedules = formPolyId
+    ? schedules.filter((s: Schedule) => s.doctor?.poly_id === formPolyId && s.date === selectedDate)
     : []
-  const polies = polyData?.data || []
   const statuses = statusData?.data || []
   const reservations = reservationData?.data?.data || []
 
-  // Get selected schedule object
-  const selectedSchedule = schedules.find((s: Schedule) => s.id === selectedScheduleId)
+  // Get selected schedule object (from form or search params)
+  const selectedSchedule = schedules.find((s: Schedule) => s.id === (formScheduleId || selectedScheduleId))
 
   // Compute quota info for selected schedule
   const quotaInfo = useMemo(() => {
@@ -122,15 +159,16 @@ function AdministrasiAntreanPage() {
     const quota = selectedSchedule.quota
     if (quota === null || quota === undefined) return null
 
+    const scheduleId = formScheduleId || selectedScheduleId
     const reservationsForSchedule = reservations.filter(
-      (r: Reservation) => r.schedule_id === selectedScheduleId
+      (r: Reservation) => r.schedule_id === scheduleId
     ).length
 
     const remaining = Math.max(0, quota - reservationsForSchedule)
     const isFull = remaining === 0
 
     return { quota, used: reservationsForSchedule, remaining, isFull }
-  }, [selectedSchedule, reservations, selectedScheduleId])
+  }, [selectedSchedule, reservations, formScheduleId, selectedScheduleId])
 
   // Get status id by name
   const getStatusId = (statusName: QueueStatusName) => {
@@ -159,22 +197,21 @@ function AdministrasiAntreanPage() {
     return polyMatch && statusMatch
   })
 
-  // Calculate summary based on status
-  const waitingId = getStatusId("WAITING")
-  const anamnesaId = getStatusId("ANAMNESA")
-  const waitingDoctorId = getStatusId("WAITING_DOCTOR")
-  const withDoctorId = getStatusId("WITH_DOCTOR")
-  const doneId = getStatusId("DONE")
-  const noShowId = getStatusId("NO_SHOW")
+  // Handle poly/schedule change from header
+  const handlePolyChange = (polyId: number | null) => {
+    navigate({
+      search: (prev) => ({ ...prev, polyId: polyId ?? undefined, scheduleId: undefined }),
+    })
+  }
 
-  const summary = {
-    total: reservations.length,
-    waiting: reservations.filter((r: Reservation) => r.status_id === waitingId).length,
-    inProgress: reservations.filter((r: Reservation) =>
-      [anamnesaId, waitingDoctorId, withDoctorId].includes(r.status_id)
-    ).length,
-    done: reservations.filter((r: Reservation) => r.status_id === doneId).length,
-    noShow: reservations.filter((r: Reservation) => r.status_id === noShowId).length,
+  const handleScheduleChange = (scheduleId: number | null) => {
+    navigate({
+      search: (prev) => ({ ...prev, scheduleId: scheduleId ?? undefined }),
+    })
+  }
+
+  const handleRefresh = () => {
+    refetch()
   }
 
   const handleAction = (
@@ -198,8 +235,7 @@ function AdministrasiAntreanPage() {
         toast.success("Reservasi dibatalkan")
       }
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Gagal mengubah status")
+      toast.error(getApiErrorMessage(error))
     } finally {
       setConfirmOpen(false)
       setPendingAction(null)
@@ -213,9 +249,9 @@ function AdministrasiAntreanPage() {
       email: "",
       no_bpjs: "",
       bpjs: false,
-      poly_id: undefined,
+      poly_id: selectedPolyId ?? undefined,
       schedule_id: undefined,
-      date: today,
+      date: selectedDate,
     })
     setShowSchedulePicker(false)
     setIsFormOpen(true)
@@ -246,7 +282,7 @@ function AdministrasiAntreanPage() {
       const err = error as { response?: { data?: { message?: string }; status?: number } }
       
       // Handle quota exceeded error specifically
-      const errorMessage = err.response?.data?.message || ""
+      const errorMessage = getApiErrorMessage(error)
       if (
         err.response?.status === 422 ||
         err.response?.status === 409 ||
@@ -259,7 +295,7 @@ function AdministrasiAntreanPage() {
         // Refetch to get latest quota state
         refetch()
       } else {
-        toast.error(errorMessage || "Gagal mendaftarkan pasien")
+        toast.error(errorMessage)
       }
     }
   })
@@ -268,85 +304,29 @@ function AdministrasiAntreanPage() {
   const formatQueueNumber = (num: number | string) => String(num).padStart(3, "0")
 
   // Determine if submit should be disabled
-  const isSubmitDisabled = createReservationMutation.isPending || (quotaInfo?.isFull ?? false) || !selectedScheduleId
+  const isSubmitDisabled = createReservationMutation.isPending || (quotaInfo?.isFull ?? false) || !formScheduleId
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Pendaftaran & Antrean</h1>
-          <p className="text-muted-foreground">
-            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button onClick={openRegisterForm}>
-            <Plus className="mr-2 h-4 w-4" />
-            Daftar Pasien
-          </Button>
-        </div>
-      </div>
+      {/* Shared Header */}
+      <AntreanHeader
+        title="Pendaftaran & Antrean"
+        date={selectedDate}
+        selectedPolyId={selectedPolyId}
+        selectedScheduleId={selectedScheduleId}
+        reservations={reservations}
+        onPolyChange={handlePolyChange}
+        onScheduleChange={handleScheduleChange}
+        onRefresh={handleRefresh}
+        showPolySelector={true}
+      />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {isLoading ? (
-          <>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i} className="border">
-                <CardContent className="p-4">
-                  <Skeleton className="h-4 w-20 mb-2" />
-                  <Skeleton className="h-8 w-12" />
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        ) : (
-          <>
-            <SummaryCard
-              title="Total Pasien"
-              value={summary.total}
-              icon={Users}
-              color="slate"
-              active={filterStatus === "all"}
-              onClick={() => setFilterStatus("all")}
-            />
-            <SummaryCard
-              title={QUEUE_STATUS_CONFIG.WAITING.label}
-              value={summary.waiting}
-              icon={Clock}
-              color="blue"
-              active={filterStatus === "WAITING"}
-              onClick={() => setFilterStatus("WAITING")}
-            />
-            <SummaryCard
-              title="Sedang Proses"
-              value={summary.inProgress}
-              icon={Activity}
-              color="yellow"
-              active={filterStatus === "IN_PROGRESS"}
-              onClick={() => setFilterStatus("IN_PROGRESS")}
-            />
-            <SummaryCard
-              title={QUEUE_STATUS_CONFIG.DONE.label}
-              value={summary.done}
-              icon={CheckCircle}
-              color="green"
-              active={filterStatus === "DONE"}
-              onClick={() => setFilterStatus("DONE")}
-            />
-            <SummaryCard
-              title="Tidak Hadir"
-              value={summary.noShow}
-              icon={XCircle}
-              color="gray"
-              active={filterStatus === "NO_SHOW"}
-              onClick={() => setFilterStatus("NO_SHOW")}
-            />
-          </>
-        )}
+      {/* Action Button */}
+      <div className="flex justify-end">
+        <Button onClick={openRegisterForm}>
+          <Plus className="mr-2 h-4 w-4" />
+          Daftar Pasien
+        </Button>
       </div>
 
       {/* Queue List with Filters */}
@@ -595,11 +575,11 @@ function AdministrasiAntreanPage() {
                 </div>
               </div>
 
-              {!selectedPolyId ? (
+              {!formPolyId ? (
                 <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center text-muted-foreground">
                   <p>Pilih poli terlebih dahulu untuk melihat jadwal dokter</p>
                 </div>
-              ) : selectedScheduleId && !showSchedulePicker ? (
+              ) : formScheduleId && !showSchedulePicker ? (
                 // Show selected schedule summary
                 <div className="space-y-2">
                   <SelectedScheduleSummary
@@ -620,7 +600,7 @@ function AdministrasiAntreanPage() {
                   <SchedulePicker
                     schedules={filteredSchedules}
                     reservations={reservations}
-                    selectedScheduleId={selectedScheduleId}
+                    selectedScheduleId={formScheduleId}
                     onSelect={handleScheduleSelect}
                     isLoading={scheduleLoading}
                   />
@@ -631,7 +611,7 @@ function AdministrasiAntreanPage() {
               )}
             </div>
 
-            <input type="hidden" {...register("date")} value={today} />
+            <input type="hidden" {...register("date")} value={selectedDate} />
 
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
@@ -639,7 +619,7 @@ function AdministrasiAntreanPage() {
               </Button>
               <Button type="submit" disabled={isSubmitDisabled}>
                 {createReservationMutation.isPending && <LoadingSpinner size="sm" className="mr-2" />}
-                {quotaInfo?.isFull ? "Kuota Penuh" : !selectedScheduleId ? "Pilih Jadwal" : "Daftarkan"}
+                {quotaInfo?.isFull ? "Kuota Penuh" : !formScheduleId ? "Pilih Jadwal" : "Daftarkan"}
               </Button>
             </div>
           </form>
@@ -654,43 +634,5 @@ function AdministrasiAntreanPage() {
         onConfirm={confirmAction}
       />
     </div>
-  )
-}
-
-interface SummaryCardProps {
-  title: string
-  value: number
-  icon: React.ElementType
-  color: "slate" | "blue" | "yellow" | "green" | "gray"
-  active?: boolean
-  onClick?: () => void
-}
-
-function SummaryCard({ title, value, icon: Icon, color, active, onClick }: SummaryCardProps) {
-  const colorStyles = {
-    slate: "bg-slate-50 text-slate-700 border-slate-200 ring-slate-500",
-    blue: "bg-blue-50 text-blue-700 border-blue-200 ring-blue-500",
-    yellow: "bg-yellow-50 text-yellow-700 border-yellow-200 ring-yellow-500",
-    green: "bg-green-50 text-green-700 border-green-200 ring-green-500",
-    gray: "bg-gray-50 text-gray-700 border-gray-200 ring-gray-500",
-  }
-
-  return (
-    <Card
-      className={cn(
-        "cursor-pointer transition-all hover:shadow-md border",
-        colorStyles[color],
-        active && "ring-2 ring-offset-1"
-      )}
-      onClick={onClick}
-    >
-      <CardContent className="p-4 flex flex-col justify-between h-full min-h-[100px]">
-        <div className="flex justify-between items-start">
-          <p className="text-sm font-medium opacity-80">{title}</p>
-          <Icon className="h-4 w-4 opacity-70" />
-        </div>
-        <p className="text-3xl font-bold mt-2">{value}</p>
-      </CardContent>
-    </Card>
   )
 }

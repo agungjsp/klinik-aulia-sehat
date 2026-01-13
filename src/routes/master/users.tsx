@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { User } from "@/types"
 
 export const Route = createFileRoute("/master/users")({
@@ -144,8 +145,8 @@ function UsersPage() {
       }
       setIsFormOpen(false)
       reset()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Terjadi kesalahan")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   })
 
@@ -155,8 +156,8 @@ function UsersPage() {
       await deleteMutation.mutateAsync(deleteId)
       toast.success("User berhasil dihapus")
       setDeleteId(null)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menghapus user")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   }
 
@@ -166,8 +167,8 @@ function UsersPage() {
       await restoreMutation.mutateAsync(restoreId)
       toast.success("User berhasil direstore")
       setRestoreId(null)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal merestore user")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   }
 

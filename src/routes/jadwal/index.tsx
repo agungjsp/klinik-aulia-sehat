@@ -27,6 +27,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { Schedule } from "@/types"
 
 export const Route = createFileRoute("/jadwal/")({
@@ -170,8 +171,7 @@ function JadwalPage() {
       setIsFormOpen(false)
       setSelectedDate(null)
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Terjadi kesalahan")
+      toast.error(getApiErrorMessage(error))
     }
   })
 
@@ -183,8 +183,7 @@ function JadwalPage() {
       setDeleteId(null)
       setSelectedDate(null)
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Gagal menghapus jadwal")
+      toast.error(getApiErrorMessage(error))
     }
   }
 

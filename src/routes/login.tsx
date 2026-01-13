@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { getDefaultRoute } from "@/lib/roles"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username wajib diisi"),
@@ -53,8 +54,8 @@ function LoginPage() {
         toast.error(data.message || "Login gagal")
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Login gagal")
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error))
     },
   })
 

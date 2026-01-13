@@ -36,6 +36,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getApiErrorMessage } from "@/lib/api-error"
 import type { Role } from "@/types"
 
 export const Route = createFileRoute("/master/roles")({
@@ -97,8 +98,8 @@ function RolesPage() {
       }
       setIsFormOpen(false)
       reset()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Terjadi kesalahan")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   })
 
@@ -108,8 +109,8 @@ function RolesPage() {
       await deleteMutation.mutateAsync(deleteId)
       toast.success("Role berhasil dihapus")
       setDeleteId(null)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menghapus role")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   }
 
@@ -119,8 +120,8 @@ function RolesPage() {
       await restoreMutation.mutateAsync(restoreId)
       toast.success("Role berhasil direstore")
       setRestoreId(null)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal merestore role")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
     }
   }
 
