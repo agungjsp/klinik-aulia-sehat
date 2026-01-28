@@ -55,8 +55,8 @@ export function useReservationUpdate() {
 export function useReservationTransition() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, action }: { id: number; action: ReservationTransitionAction }) =>
-      reservationService.transition(id, action),
+    mutationFn: ({ queueId, action }: { queueId: number; action: ReservationTransitionAction }) =>
+      reservationService.transition(queueId, action),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reservationKeys.all })
       queryClient.invalidateQueries({ queryKey: ["queue"] })

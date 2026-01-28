@@ -123,13 +123,18 @@ function PerawatAntreanPage() {
 
   const confirmAction = async () => {
     if (!pendingAction) return
+    const queueId = pendingAction.reservation.queue?.id
+    if (!queueId) {
+      toast.error("Data antrean tidak tersedia.")
+      return
+    }
 
     try {
       if (pendingAction.action === "anamnesa") {
-        await toAnamnesaMutation.mutateAsync(pendingAction.reservation.id)
+        await toAnamnesaMutation.mutateAsync(queueId)
         toast.success("Pasien dipanggil untuk anamnesa")
       } else {
-        await toWaitingDoctorMutation.mutateAsync(pendingAction.reservation.id)
+        await toWaitingDoctorMutation.mutateAsync(queueId)
         toast.success("Anamnesa selesai, pasien menunggu dokter")
       }
     } catch (error: unknown) {
