@@ -1,23 +1,60 @@
-import { Link, useRouter } from "@tanstack/react-router"
-import { Home, LogOut, Database, Users, Calendar, ClipboardList, Stethoscope, Activity, BarChart3, UserPlus } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Link, useRouter, useLocation } from "@tanstack/react-router"
+import {
+  Home,
+  LogOut,
+  Users,
+  Calendar,
+  ClipboardList,
+  Stethoscope,
+  Activity,
+  BarChart3,
+  UserPlus,
+  ChevronDown,
+  UserCog,
+  Shield,
+  Building2,
+  MessageSquare,
+  Bell,
+  Smartphone,
+  Settings,
+  HelpCircle,
+  CalendarClock
+} from "lucide-react"
 import { useAuthStore } from "@/stores"
 import { authService } from "@/services"
-import { ROLES, hasAnyRole, ROLE_COLORS, getPrimaryRole, type RoleName } from "@/lib/roles"
+import { ROLES, hasAnyRole, getPrimaryRole, type RoleName } from "@/lib/roles"
 import type { LucideIcon } from "lucide-react"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface MenuItem {
   to: string
   icon: LucideIcon
   label: string
-  roles?: RoleName[] // If undefined, visible to all authenticated users
+  roles?: RoleName[]
 }
 
 interface MenuSection {
   title?: string
   items: MenuItem[]
-  roles?: RoleName[] // If undefined, visible to all authenticated users
+  roles?: RoleName[]
 }
 
 const menuConfig: MenuSection[] = [
@@ -26,75 +63,81 @@ const menuConfig: MenuSection[] = [
       { to: "/", icon: Home, label: "Dashboard" },
     ],
   },
-  // Administrasi section
   {
-    title: "Administrasi",
-    roles: [ROLES.SUPERADMIN, ROLES.ADMINISTRASI],
+    title: "Layanan Hari Ini",
     items: [
-      { to: "/administrasi/antrean", icon: ClipboardList, label: "Pendaftaran" },
-      { to: "/jadwal", icon: Calendar, label: "Jadwal Dokter" },
+      { 
+        to: "/administrasi/antrean", 
+        icon: ClipboardList, 
+        label: "Pendaftaran & Antrean", 
+        roles: [ROLES.SUPERADMIN, ROLES.ADMINISTRASI] 
+      },
+      { 
+        to: "/perawat/antrean", 
+        icon: Activity, 
+        label: "Antrean Anamnesa", 
+        roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA] 
+      },
+      { 
+        to: "/perawat-asisten/antrean", 
+        icon: UserPlus, 
+        label: "Panggil Pasien", 
+        roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ASISTEN] 
+      },
+      { 
+        to: "/dokter/antrean", 
+        icon: Stethoscope, 
+        label: "Antrean Pasien", 
+        roles: [ROLES.SUPERADMIN, ROLES.DOKTER] 
+      },
+      { 
+        to: "/jadwal", 
+        icon: Calendar, 
+        label: "Jadwal Dokter", 
+        roles: [ROLES.SUPERADMIN, ROLES.ADMINISTRASI, ROLES.KEPALA_KLINIK] 
+      },
+      { 
+        to: "/pengaturan/jadwal-kontrol", 
+        icon: CalendarClock, 
+        label: "Jadwal Kontrol", 
+        roles: [ROLES.SUPERADMIN, ROLES.DOKTER, ROLES.PERAWAT_ANAMNESA, ROLES.PERAWAT_ASISTEN] 
+      },
     ],
   },
-  // Perawat Anamnesa section
   {
-    title: "Anamnesa",
-    roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA],
-    items: [
-      { to: "/perawat/antrean", icon: Activity, label: "Antrean Anamnesa" },
-    ],
-  },
-  // Perawat Asisten section
-  {
-    title: "Asisten Dokter",
-    roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ASISTEN],
-    items: [
-      { to: "/perawat-asisten/antrean", icon: UserPlus, label: "Panggil Pasien" },
-    ],
-  },
-  // Dokter section
-  {
-    title: "Dokter",
-    roles: [ROLES.SUPERADMIN, ROLES.DOKTER],
-    items: [
-      { to: "/dokter/antrean", icon: Stethoscope, label: "Antrean Pasien" },
-    ],
-  },
-  // Kepala Klinik & Superadmin - Laporan
-  {
-    title: "Laporan",
+    title: "Laporan & Analytics",
     roles: [ROLES.SUPERADMIN, ROLES.KEPALA_KLINIK],
     items: [
-      { to: "/laporan", icon: BarChart3, label: "Laporan & Analytics" },
+      { to: "/laporan", icon: BarChart3, label: "Ringkasan Laporan" },
     ],
   },
-  // Pengaturan - Superadmin only (except Jadwal Kontrol)
   {
-    title: "Pengaturan",
-    roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA, ROLES.PERAWAT_ASISTEN, ROLES.DOKTER],
-    items: [
-      { to: "/pengaturan/template-pesan", icon: Database, label: "Template Pesan", roles: [ROLES.SUPERADMIN] },
-      { to: "/pengaturan/konfigurasi-pengingat", icon: Database, label: "Konfigurasi Pengingat", roles: [ROLES.SUPERADMIN] },
-      { to: "/pengaturan/konfigurasi-whatsapp", icon: Database, label: "Konfigurasi WhatsApp", roles: [ROLES.SUPERADMIN] },
-      { to: "/pengaturan/konfigurasi-sistem", icon: Database, label: "Konfigurasi Sistem", roles: [ROLES.SUPERADMIN] },
-      { to: "/pengaturan/faq", icon: Database, label: "FAQ", roles: [ROLES.SUPERADMIN] },
-      { to: "/pengaturan/jadwal-kontrol", icon: Calendar, label: "Jadwal Kontrol", roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA, ROLES.PERAWAT_ASISTEN, ROLES.DOKTER] },
-    ],
-  },
-  // Master Data - Superadmin only
-  {
-    title: "Master Data",
+    title: "Manajemen Klinik",
     roles: [ROLES.SUPERADMIN],
     items: [
-      { to: "/master/pasien", icon: Users, label: "Pasien" },
-      { to: "/master/users", icon: Users, label: "Users" },
-      { to: "/master/roles", icon: Database, label: "Roles" },
-      { to: "/master/poli", icon: Database, label: "Poli" },
+      { to: "/master/pasien", icon: Users, label: "Data Pasien" },
+      { to: "/master/poli", icon: Building2, label: "Poliklinik" },
+      { to: "/master/users", icon: UserCog, label: "Manajemen User" },
+      { to: "/master/roles", icon: Shield, label: "Akses & Roles" },
+    ],
+  },
+  {
+    title: "Pengaturan Sistem",
+    roles: [ROLES.SUPERADMIN],
+    items: [
+      { to: "/pengaturan/template-pesan", icon: MessageSquare, label: "Template Pesan" },
+      { to: "/pengaturan/konfigurasi-pengingat", icon: Bell, label: "Pengingat" },
+      { to: "/pengaturan/konfigurasi-whatsapp", icon: Smartphone, label: "WhatsApp" },
+      { to: "/pengaturan/konfigurasi-sistem", icon: Settings, label: "Konfigurasi Umum" },
+      { to: "/pengaturan/faq", icon: HelpCircle, label: "Bantuan & FAQ" },
     ],
   },
 ]
 
-export function Sidebar() {
+export function AppSidebar() {
   const router = useRouter()
+  const location = useLocation()
+  const pathname = location.pathname
   const { user, logout } = useAuthStore()
   const userRoles = user?.roles
   const primaryRole = getPrimaryRole(userRoles)
@@ -118,66 +161,89 @@ export function Sidebar() {
     return hasAnyRole(userRoles, item.roles)
   }
 
-  // Get role badge color
-  const getRoleBadgeClass = () => {
-    if (!primaryRole) return "bg-gray-100 text-gray-800"
-    return ROLE_COLORS[primaryRole] ?? "bg-gray-100 text-gray-800"
-  }
-
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-card">
-      <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-lg font-semibold">Klinik Aulia Sehat</h1>
-      </div>
-
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+    <Sidebar collapsible="icon" variant="inset">
+      <SidebarHeader>
+        <div className="flex items-center gap-2 px-2 py-1">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Activity className="size-4" />
+          </div>
+          <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-semibold">Klinik Aulia Sehat</span>
+            <span className="truncate text-xs">Sistem Informasi</span>
+          </div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
         {menuConfig.map((section, idx) => {
           if (!canSeeSection(section)) return null
           const visibleItems = section.items.filter(canSeeItem)
           if (visibleItems.length === 0) return null
 
           return (
-            <div key={idx} className={section.title ? "pt-4" : ""}>
+            <SidebarGroup key={idx}>
               {section.title && (
-                <p className="mb-2 px-3 text-xs font-medium text-muted-foreground">
-                  {section.title}
-                </p>
+                <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
               )}
-              {visibleItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent",
-                    "[&.active]:bg-accent [&.active]:font-medium"
-                  )}
-                >
-                  <item.icon aria-hidden="true" className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleItems.map((item) => {
+                    const isActive = item.to === "/" 
+                      ? pathname === "/" 
+                      : pathname.startsWith(item.to)
+                    
+                    return (
+                      <SidebarMenuItem key={item.to}>
+                        <SidebarMenuButton asChild tooltip={item.label} isActive={isActive}>
+                          <Link to={item.to}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           )
         })}
-      </nav>
-
-      <div className="border-t p-4">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            {user?.name?.charAt(0) ?? "U"}
-          </div>
-          <div className="flex-1 truncate">
-            <p className="text-sm font-medium">{user?.name}</p>
-            <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs", getRoleBadgeClass())}>
-              {primaryRole ?? "Unknown"}
-            </span>
-          </div>
-        </div>
-        <Button variant="outline" className="w-full" onClick={handleLogout}>
-          <LogOut aria-hidden="true" className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
-      </div>
-    </aside>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    {user?.name?.charAt(0) ?? "U"}
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-semibold">{user?.name}</span>
+                    <span className="truncate text-xs">{primaryRole ?? "User"}</span>
+                  </div>
+                  <ChevronDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side="bottom"
+                align="end"
+                sideOffset={4}
+              >
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
   )
 }
