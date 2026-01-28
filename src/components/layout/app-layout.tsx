@@ -1,4 +1,7 @@
-import { Sidebar } from "./sidebar"
+import { AppSidebar } from "./sidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
+import { Toaster } from "@/components/ui/sonner"
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -6,17 +9,26 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="flex h-screen">
+    <SidebarProvider defaultOpen={true}>
       <a
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-foreground"
-        href="#main"
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
       >
-        Lewati ke konten utama
+        Skip to content
       </a>
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-background p-6" id="main">
-        {children}
-      </main>
-    </div>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
+        </div>
+      </SidebarInset>
+      <Toaster />
+    </SidebarProvider>
   )
 }
