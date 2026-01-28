@@ -225,11 +225,16 @@ function AdministrasiAntreanPage() {
   const confirmAction = async () => {
     if (!pendingAction) return
     try {
+      const queueId = pendingAction.reservation.queue?.id
+      if (!queueId) {
+        toast.error("Data antrean tidak tersedia.")
+        return
+      }
       if (pendingAction.action === "noshow") {
-        await noShowMutation.mutateAsync(pendingAction.reservation.id)
+        await noShowMutation.mutateAsync(queueId)
         toast.success("Pasien ditandai tidak hadir")
       } else {
-        await cancelledMutation.mutateAsync(pendingAction.reservation.id)
+        await cancelledMutation.mutateAsync(queueId)
         toast.success("Reservasi dibatalkan")
       }
     } catch (error: unknown) {
@@ -277,17 +282,21 @@ function AdministrasiAntreanPage() {
       toast.success(`Pasien berhasil didaftarkan${queueNumber ? ` - Nomor antrean: ${queueNumber}` : ""}`)
       setIsFormOpen(false)
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string }; status?: number } }
-      
       // Handle quota exceeded error specifically
       const errorMessage = getApiErrorMessage(error)
+      const normalizedMessage = errorMessage.toLowerCase()
       if (
-        err.response?.status === 422 ||
-        err.response?.status === 409 ||
-        errorMessage.toLowerCase().includes("kuota") ||
-        errorMessage.toLowerCase().includes("quota") ||
-        errorMessage.toLowerCase().includes("penuh") ||
-        errorMessage.toLowerCase().includes("full")
+        (normalizedMessage.includes("whatsapp") || normalizedMessage.includes("bpjs")) &&
+        (normalizedMessage.includes("already registered") || normalizedMessage.includes("sudah terdaftar"))
+      ) {
+        toast.error("Nomor WhatsApp atau BPJS sudah terdaftar dengan nama pasien lain.")
+        return
+      }
+      if (
+        normalizedMessage.includes("kuota") ||
+        normalizedMessage.includes("quota") ||
+        normalizedMessage.includes("penuh") ||
+        normalizedMessage.includes("full")
       ) {
         toast.error("Kuota jadwal sudah penuh. Silakan pilih jadwal lain.")
         // Refetch to get latest quota state

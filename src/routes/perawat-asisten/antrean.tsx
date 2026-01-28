@@ -118,9 +118,14 @@ function PerawatAsistenAntreanPage() {
   }
 
   const handleCallPatient = async (reservation: Reservation) => {
+    const queueId = reservation.queue?.id
+    if (!queueId) {
+      toast.error("Data antrean tidak tersedia.")
+      return
+    }
     try {
       const currentCallCount = getCallCount(reservation)
-      await toWithDoctorMutation.mutateAsync(reservation.id)
+      await toWithDoctorMutation.mutateAsync(queueId)
       const newCallCount = currentCallCount + 1
       if (newCallCount === 1) {
         toast.success(`Memanggil pasien ${reservation.patient?.patient_name}`)
@@ -133,8 +138,13 @@ function PerawatAsistenAntreanPage() {
   }
 
   const handleMarkNoShow = async (reservation: Reservation) => {
+    const queueId = reservation.queue?.id
+    if (!queueId) {
+      toast.error("Data antrean tidak tersedia.")
+      return
+    }
     try {
-      await toNoShowMutation.mutateAsync(reservation.id)
+      await toNoShowMutation.mutateAsync(queueId)
       toast.warning("Pasien ditandai tidak hadir")
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))

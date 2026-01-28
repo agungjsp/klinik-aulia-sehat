@@ -123,13 +123,18 @@ function DokterAntreanPage() {
 
   const confirmAction = async () => {
     if (!pendingAction) return
+    const queueId = pendingAction.reservation.queue?.id
+    if (!queueId) {
+      toast.error("Data antrean tidak tersedia.")
+      return
+    }
 
     try {
       if (pendingAction.action === "withdoctor") {
-        await toWithDoctorMutation.mutateAsync(pendingAction.reservation.id)
+        await toWithDoctorMutation.mutateAsync(queueId)
         toast.success("Pasien dipanggil untuk konsultasi")
       } else {
-        await toDoneMutation.mutateAsync(pendingAction.reservation.id)
+        await toDoneMutation.mutateAsync(queueId)
         toast.success("Konsultasi selesai")
       }
     } catch (error: unknown) {
