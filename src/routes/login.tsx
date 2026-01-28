@@ -9,7 +9,7 @@ import { authService } from "@/services"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { getDefaultRoute } from "@/lib/roles"
 import { getApiErrorMessage } from "@/lib/api-error"
@@ -68,9 +68,7 @@ function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Klinik Aulia Sehat</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Masuk ke sistem antrean
-          </p>
+          <CardDescription>Masuk ke sistem antrean</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -82,9 +80,12 @@ function LoginPage() {
                 {...register("username")}
                 autoComplete="username"
                 aria-invalid={!!errors.username}
+                aria-describedby={errors.username ? "username-error" : undefined}
               />
               {errors.username && (
-                <p className="text-sm text-destructive">{errors.username.message}</p>
+                <p id="username-error" className="text-sm text-destructive">
+                  {errors.username.message}
+                </p>
               )}
             </div>
 
@@ -97,9 +98,12 @@ function LoginPage() {
                 {...register("password")}
                 autoComplete="current-password"
                 aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "password-error" : undefined}
               />
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p id="password-error" className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
