@@ -19,7 +19,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AntreanHeader } from "@/components/antrean"
 import { useAuthStore } from "@/stores/auth"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Reservation, QueueStatusName } from "@/types"
+import type { Poly, Reservation, QueueStatusName } from "@/types"
+
+const EMPTY_POLIES: Poly[] = []
 
 const antreanSearchSchema = z.object({
   polyId: z.number().optional(),
@@ -56,7 +58,7 @@ function DokterAntreanPage() {
   const toDoneMutation = useReservationToDone()
 
   // Set default poly if not set and we have polies
-  const polies = polyData?.data || []
+  const polies = polyData?.data ?? EMPTY_POLIES
   useEffect(() => {
     if (!selectedPolyId && polies.length > 0 && !search.polyId) {
       const defaultPolyId = user?.poly_id ?? polies[0]?.id

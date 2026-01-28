@@ -7,6 +7,8 @@ import { Clock, Activity, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Poly, Reservation, QueueStatusName } from "@/types"
 
+const EMPTY_RESERVATIONS: Reservation[] = []
+
 export const Route = createFileRoute("/display/")({
   component: DisplayPage,
 })
@@ -29,7 +31,7 @@ function DisplayPage() {
     return () => clearInterval(interval)
   }, [refetch])
 
-  const reservations = reservationData?.data?.data || []
+  const reservations = reservationData?.data?.data ?? EMPTY_RESERVATIONS
   const statuses = statusData?.data || []
 
   // Get status id by name

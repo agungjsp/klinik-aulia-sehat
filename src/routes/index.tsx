@@ -18,7 +18,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Users, Calendar, CheckCircle, XCircle, Clock, Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { DashboardTrendItem, DashboardSummaryItem, DashboardReservationsByPolyItem, DashboardPatientAttendance, DashboardAverageWaitingTimeItem, DashboardPeakHourItem, DashboardBpjsVsGeneralItem } from "@/types"
+import type { Poly, DashboardTrendItem, DashboardSummaryItem, DashboardReservationsByPolyItem, DashboardPatientAttendance, DashboardAverageWaitingTimeItem, DashboardPeakHourItem, DashboardBpjsVsGeneralItem } from "@/types"
+
+const EMPTY_POLIES: Poly[] = []
+const EMPTY_TREND: DashboardTrendItem[] = []
+const EMPTY_POLY_DIST: DashboardReservationsByPolyItem[] = []
+const EMPTY_PEAK_HOURS: DashboardPeakHourItem[] = []
 
 export const Route = createFileRoute("/")({
   component: DashboardPage,
@@ -112,13 +117,13 @@ function DashboardPage() {
     poly_id: selectedPolyId,
   })
 
-  const polies = polyData?.data || []
+  const polies = polyData?.data ?? EMPTY_POLIES
   const summary = summaryData?.data || []
-  const trend = trendData?.data || []
-  const polyDist = polyDistData?.data || []
+  const trend = trendData?.data ?? EMPTY_TREND
+  const polyDist = polyDistData?.data ?? EMPTY_POLY_DIST
   const attendance = attendanceData?.data
   const waitingTime = waitingTimeData?.data || []
-  const peakHours = peakHoursData?.data || []
+  const peakHours = peakHoursData?.data ?? EMPTY_PEAK_HOURS
   const bpjs = bpjsData?.data || []
 
   // Process trend data with memoization

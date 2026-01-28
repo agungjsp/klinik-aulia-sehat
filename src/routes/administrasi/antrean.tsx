@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { id as localeId } from "date-fns/locale"
+ 
 import { XCircle, Plus, Filter, AlertTriangle, CalendarDays } from "lucide-react"
 import {
   useReservationList,
@@ -32,7 +32,10 @@ import { useAuthStore } from "@/stores/auth"
 import { cn } from "@/lib/utils"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Reservation, QueueStatusName, Schedule } from "@/types"
+import type { Poly, Reservation, QueueStatusName, Schedule } from "@/types"
+
+const EMPTY_POLIES: Poly[] = []
+const EMPTY_RESERVATIONS: Reservation[] = []
 
 const antreanSearchSchema = z.object({
   polyId: z.number().optional(),
@@ -88,7 +91,7 @@ function AdministrasiAntreanPage() {
   const cancelledMutation = useReservationToCancelled()
 
   // Set default poly if not set and we have polies
-  const polies = polyData?.data || []
+  const polies = polyData?.data ?? EMPTY_POLIES
   useEffect(() => {
     if (!selectedPolyId && polies.length > 0 && !search.polyId) {
       const defaultPolyId = user?.poly_id ?? polies[0]?.id
@@ -147,7 +150,7 @@ function AdministrasiAntreanPage() {
     ? schedules.filter((s: Schedule) => s.doctor?.poly_id === formPolyId && s.date === selectedDate)
     : []
   const statuses = statusData?.data || []
-  const reservations = reservationData?.data?.data || []
+  const reservations = reservationData?.data?.data ?? EMPTY_RESERVATIONS
 
   // Get selected schedule object (from form or search params)
   const selectedSchedule = schedules.find((s: Schedule) => s.id === (formScheduleId || selectedScheduleId))
@@ -169,11 +172,6 @@ function AdministrasiAntreanPage() {
 
     return { quota, used: reservationsForSchedule, remaining, isFull }
   }, [selectedSchedule, reservations, formScheduleId, selectedScheduleId])
-
-  // Get status id by name
-  const getStatusId = (statusName: QueueStatusName) => {
-    return statuses.find((s) => s.status_name === statusName)?.id
-  }
 
   // Get status name from id
   const getStatusName = (statusId: number): QueueStatusName | undefined => {

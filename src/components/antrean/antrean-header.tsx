@@ -11,7 +11,7 @@ import { usePolyList, useScheduleList, useCurrentQueue, useStatusList } from "@/
 import { useAntreanSummary } from "@/hooks/use-antrean-summary"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 import { cn } from "@/lib/utils"
-import type { Reservation, Schedule } from "@/types"
+import type { Reservation } from "@/types"
 
 interface AntreanHeaderProps {
   title: string
@@ -197,16 +197,16 @@ export function AntreanHeader({
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Anamnesa</p>
                     <p className="text-2xl font-bold">
-                      {currentQueueData?.data?.queue_number_anamnesa
-                        ? formatQueueNumber(currentQueueData.data.queue_number_anamnesa)
+                      {currentQueueData?.queue_number_anamnesa
+                        ? formatQueueNumber(currentQueueData.queue_number_anamnesa)
                         : "--"}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Dengan Dokter</p>
                     <p className="text-2xl font-bold">
-                      {currentQueueData?.data?.queue_number_with_doctor
-                        ? formatQueueNumber(currentQueueData.data.queue_number_with_doctor)
+                      {currentQueueData?.queue_number_with_doctor
+                        ? formatQueueNumber(currentQueueData.queue_number_with_doctor)
                         : "--"}
                     </p>
                   </div>
