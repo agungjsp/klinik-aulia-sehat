@@ -20,6 +20,12 @@ import { Route as DisplayIndexRouteImport } from './routes/display/index'
 import { Route as CekAntreanIndexRouteImport } from './routes/cek-antrean/index'
 import { Route as PerawatAntreanRouteImport } from './routes/perawat/antrean'
 import { Route as PerawatAsistenAntreanRouteImport } from './routes/perawat-asisten/antrean'
+import { Route as PengaturanTemplatePesanRouteImport } from './routes/pengaturan/template-pesan'
+import { Route as PengaturanKonfigurasiWhatsappRouteImport } from './routes/pengaturan/konfigurasi-whatsapp'
+import { Route as PengaturanKonfigurasiSistemRouteImport } from './routes/pengaturan/konfigurasi-sistem'
+import { Route as PengaturanKonfigurasiPengingatRouteImport } from './routes/pengaturan/konfigurasi-pengingat'
+import { Route as PengaturanJadwalKontrolRouteImport } from './routes/pengaturan/jadwal-kontrol'
+import { Route as PengaturanFaqRouteImport } from './routes/pengaturan/faq'
 import { Route as MasterUsersRouteImport } from './routes/master/users'
 import { Route as MasterRolesRouteImport } from './routes/master/roles'
 import { Route as MasterPoliRouteImport } from './routes/master/poli'
@@ -82,6 +88,39 @@ const PerawatAsistenAntreanRoute = PerawatAsistenAntreanRouteImport.update({
   path: '/perawat-asisten/antrean',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PengaturanTemplatePesanRoute = PengaturanTemplatePesanRouteImport.update({
+  id: '/pengaturan/template-pesan',
+  path: '/pengaturan/template-pesan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PengaturanKonfigurasiWhatsappRoute =
+  PengaturanKonfigurasiWhatsappRouteImport.update({
+    id: '/pengaturan/konfigurasi-whatsapp',
+    path: '/pengaturan/konfigurasi-whatsapp',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PengaturanKonfigurasiSistemRoute =
+  PengaturanKonfigurasiSistemRouteImport.update({
+    id: '/pengaturan/konfigurasi-sistem',
+    path: '/pengaturan/konfigurasi-sistem',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PengaturanKonfigurasiPengingatRoute =
+  PengaturanKonfigurasiPengingatRouteImport.update({
+    id: '/pengaturan/konfigurasi-pengingat',
+    path: '/pengaturan/konfigurasi-pengingat',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PengaturanJadwalKontrolRoute = PengaturanJadwalKontrolRouteImport.update({
+  id: '/pengaturan/jadwal-kontrol',
+  path: '/pengaturan/jadwal-kontrol',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PengaturanFaqRoute = PengaturanFaqRouteImport.update({
+  id: '/pengaturan/faq',
+  path: '/pengaturan/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MasterUsersRoute = MasterUsersRouteImport.update({
   id: '/master/users',
   path: '/master/users',
@@ -125,6 +164,12 @@ export interface FileRoutesByFullPath {
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/pengaturan/faq': typeof PengaturanFaqRoute
+  '/pengaturan/jadwal-kontrol': typeof PengaturanJadwalKontrolRoute
+  '/pengaturan/konfigurasi-pengingat': typeof PengaturanKonfigurasiPengingatRoute
+  '/pengaturan/konfigurasi-sistem': typeof PengaturanKonfigurasiSistemRoute
+  '/pengaturan/konfigurasi-whatsapp': typeof PengaturanKonfigurasiWhatsappRoute
+  '/pengaturan/template-pesan': typeof PengaturanTemplatePesanRoute
   '/perawat-asisten/antrean': typeof PerawatAsistenAntreanRoute
   '/perawat/antrean': typeof PerawatAntreanRoute
   '/cek-antrean': typeof CekAntreanIndexRoute
@@ -144,6 +189,12 @@ export interface FileRoutesByTo {
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/pengaturan/faq': typeof PengaturanFaqRoute
+  '/pengaturan/jadwal-kontrol': typeof PengaturanJadwalKontrolRoute
+  '/pengaturan/konfigurasi-pengingat': typeof PengaturanKonfigurasiPengingatRoute
+  '/pengaturan/konfigurasi-sistem': typeof PengaturanKonfigurasiSistemRoute
+  '/pengaturan/konfigurasi-whatsapp': typeof PengaturanKonfigurasiWhatsappRoute
+  '/pengaturan/template-pesan': typeof PengaturanTemplatePesanRoute
   '/perawat-asisten/antrean': typeof PerawatAsistenAntreanRoute
   '/perawat/antrean': typeof PerawatAntreanRoute
   '/cek-antrean': typeof CekAntreanIndexRoute
@@ -164,6 +215,12 @@ export interface FileRoutesById {
   '/master/poli': typeof MasterPoliRoute
   '/master/roles': typeof MasterRolesRoute
   '/master/users': typeof MasterUsersRoute
+  '/pengaturan/faq': typeof PengaturanFaqRoute
+  '/pengaturan/jadwal-kontrol': typeof PengaturanJadwalKontrolRoute
+  '/pengaturan/konfigurasi-pengingat': typeof PengaturanKonfigurasiPengingatRoute
+  '/pengaturan/konfigurasi-sistem': typeof PengaturanKonfigurasiSistemRoute
+  '/pengaturan/konfigurasi-whatsapp': typeof PengaturanKonfigurasiWhatsappRoute
+  '/pengaturan/template-pesan': typeof PengaturanTemplatePesanRoute
   '/perawat-asisten/antrean': typeof PerawatAsistenAntreanRoute
   '/perawat/antrean': typeof PerawatAntreanRoute
   '/cek-antrean/': typeof CekAntreanIndexRoute
@@ -185,6 +242,12 @@ export interface FileRouteTypes {
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/pengaturan/faq'
+    | '/pengaturan/jadwal-kontrol'
+    | '/pengaturan/konfigurasi-pengingat'
+    | '/pengaturan/konfigurasi-sistem'
+    | '/pengaturan/konfigurasi-whatsapp'
+    | '/pengaturan/template-pesan'
     | '/perawat-asisten/antrean'
     | '/perawat/antrean'
     | '/cek-antrean'
@@ -204,6 +267,12 @@ export interface FileRouteTypes {
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/pengaturan/faq'
+    | '/pengaturan/jadwal-kontrol'
+    | '/pengaturan/konfigurasi-pengingat'
+    | '/pengaturan/konfigurasi-sistem'
+    | '/pengaturan/konfigurasi-whatsapp'
+    | '/pengaturan/template-pesan'
     | '/perawat-asisten/antrean'
     | '/perawat/antrean'
     | '/cek-antrean'
@@ -223,6 +292,12 @@ export interface FileRouteTypes {
     | '/master/poli'
     | '/master/roles'
     | '/master/users'
+    | '/pengaturan/faq'
+    | '/pengaturan/jadwal-kontrol'
+    | '/pengaturan/konfigurasi-pengingat'
+    | '/pengaturan/konfigurasi-sistem'
+    | '/pengaturan/konfigurasi-whatsapp'
+    | '/pengaturan/template-pesan'
     | '/perawat-asisten/antrean'
     | '/perawat/antrean'
     | '/cek-antrean/'
@@ -243,6 +318,12 @@ export interface RootRouteChildren {
   MasterPoliRoute: typeof MasterPoliRoute
   MasterRolesRoute: typeof MasterRolesRoute
   MasterUsersRoute: typeof MasterUsersRoute
+  PengaturanFaqRoute: typeof PengaturanFaqRoute
+  PengaturanJadwalKontrolRoute: typeof PengaturanJadwalKontrolRoute
+  PengaturanKonfigurasiPengingatRoute: typeof PengaturanKonfigurasiPengingatRoute
+  PengaturanKonfigurasiSistemRoute: typeof PengaturanKonfigurasiSistemRoute
+  PengaturanKonfigurasiWhatsappRoute: typeof PengaturanKonfigurasiWhatsappRoute
+  PengaturanTemplatePesanRoute: typeof PengaturanTemplatePesanRoute
   PerawatAsistenAntreanRoute: typeof PerawatAsistenAntreanRoute
   PerawatAntreanRoute: typeof PerawatAntreanRoute
   CekAntreanIndexRoute: typeof CekAntreanIndexRoute
@@ -330,6 +411,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PerawatAsistenAntreanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pengaturan/template-pesan': {
+      id: '/pengaturan/template-pesan'
+      path: '/pengaturan/template-pesan'
+      fullPath: '/pengaturan/template-pesan'
+      preLoaderRoute: typeof PengaturanTemplatePesanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan/konfigurasi-whatsapp': {
+      id: '/pengaturan/konfigurasi-whatsapp'
+      path: '/pengaturan/konfigurasi-whatsapp'
+      fullPath: '/pengaturan/konfigurasi-whatsapp'
+      preLoaderRoute: typeof PengaturanKonfigurasiWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan/konfigurasi-sistem': {
+      id: '/pengaturan/konfigurasi-sistem'
+      path: '/pengaturan/konfigurasi-sistem'
+      fullPath: '/pengaturan/konfigurasi-sistem'
+      preLoaderRoute: typeof PengaturanKonfigurasiSistemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan/konfigurasi-pengingat': {
+      id: '/pengaturan/konfigurasi-pengingat'
+      path: '/pengaturan/konfigurasi-pengingat'
+      fullPath: '/pengaturan/konfigurasi-pengingat'
+      preLoaderRoute: typeof PengaturanKonfigurasiPengingatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan/jadwal-kontrol': {
+      id: '/pengaturan/jadwal-kontrol'
+      path: '/pengaturan/jadwal-kontrol'
+      fullPath: '/pengaturan/jadwal-kontrol'
+      preLoaderRoute: typeof PengaturanJadwalKontrolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan/faq': {
+      id: '/pengaturan/faq'
+      path: '/pengaturan/faq'
+      fullPath: '/pengaturan/faq'
+      preLoaderRoute: typeof PengaturanFaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/master/users': {
       id: '/master/users'
       path: '/master/users'
@@ -387,6 +510,12 @@ const rootRouteChildren: RootRouteChildren = {
   MasterPoliRoute: MasterPoliRoute,
   MasterRolesRoute: MasterRolesRoute,
   MasterUsersRoute: MasterUsersRoute,
+  PengaturanFaqRoute: PengaturanFaqRoute,
+  PengaturanJadwalKontrolRoute: PengaturanJadwalKontrolRoute,
+  PengaturanKonfigurasiPengingatRoute: PengaturanKonfigurasiPengingatRoute,
+  PengaturanKonfigurasiSistemRoute: PengaturanKonfigurasiSistemRoute,
+  PengaturanKonfigurasiWhatsappRoute: PengaturanKonfigurasiWhatsappRoute,
+  PengaturanTemplatePesanRoute: PengaturanTemplatePesanRoute,
   PerawatAsistenAntreanRoute: PerawatAsistenAntreanRoute,
   PerawatAntreanRoute: PerawatAntreanRoute,
   CekAntreanIndexRoute: CekAntreanIndexRoute,

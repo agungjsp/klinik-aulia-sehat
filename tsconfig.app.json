@@ -25,7 +25,9 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@base-ui/react/combobox": ["./node_modules/@base-ui/react/combobox/index.d.ts"],
+      "@base-ui/react/combobox/index.js": ["./node_modules/@base-ui/react/combobox/index.d.ts"]
     }
   },
   "include": ["src"]

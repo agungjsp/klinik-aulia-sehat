@@ -78,8 +78,9 @@ function LoginPage() {
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
-                placeholder="Masukkan username"
+                placeholder="Masukkan username…"
                 {...register("username")}
+                autoComplete="username"
                 aria-invalid={!!errors.username}
               />
               {errors.username && (
@@ -92,8 +93,9 @@ function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Masukkan password"
+                placeholder="Masukkan password…"
                 {...register("password")}
+                autoComplete="current-password"
                 aria-invalid={!!errors.password}
               />
               {errors.password && (
@@ -109,7 +111,7 @@ function LoginPage() {
               {loginMutation.isPending ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
-                  Memproses...
+                  Memproses…
                 </>
               ) : (
                 "Masuk"

@@ -14,9 +14,9 @@ export type RoleName = (typeof ROLES)[keyof typeof ROLES]
 export const ROLE_ROUTES: Record<RoleName, string[]> = {
   [ROLES.SUPERADMIN]: ["*"], // All routes
   [ROLES.KEPALA_KLINIK]: ["/", "/laporan/*", "/jadwal", "/antrean", "/master/*"],
-  [ROLES.DOKTER]: ["/", "/dokter/*"],
-  [ROLES.PERAWAT_ANAMNESA]: ["/", "/perawat/*"],
-  [ROLES.PERAWAT_ASISTEN]: ["/", "/perawat-asisten/*"],
+  [ROLES.DOKTER]: ["/", "/dokter/*", "/pengaturan/jadwal-kontrol"],
+  [ROLES.PERAWAT_ANAMNESA]: ["/", "/perawat/*", "/pengaturan/jadwal-kontrol"],
+  [ROLES.PERAWAT_ASISTEN]: ["/", "/perawat-asisten/*", "/pengaturan/jadwal-kontrol"],
   [ROLES.ADMINISTRASI]: ["/", "/administrasi/*", "/jadwal"],
 }
 

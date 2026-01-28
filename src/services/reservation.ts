@@ -13,7 +13,7 @@ import type {
 
 export const reservationService = {
   getAll: async (params?: ReservationListParams) => {
-    const response = await api.get<PaginatedDataResponse<Reservation>>("/api/reservation", { params })
+    const response = await api.patch<PaginatedDataResponse<Reservation>>("/api/reservation", params)
     return response.data
   },
 
@@ -36,7 +36,7 @@ export const reservationService = {
    * Transition reservation to a new status using workflow endpoints
    */
   transition: async (id: number, action: ReservationTransitionAction) => {
-    const response = await api.patch<ReservationTransitionResponse>(`/api/reservation/${id}/${action}`)
+    const response = await api.patch<ReservationTransitionResponse>(`/api/queue/${id}/${action}`)
     return response.data
   },
 

@@ -132,12 +132,12 @@ function UsersPage() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       if (editingUser) {
-        const updateData = {
+        const updateData: UserUpdateForm = {
           ...data,
           password: data.password || undefined,
           password_confirmation: data.password_confirmation || undefined,
         }
-        await updateMutation.mutateAsync({ id: editingUser.id, data: updateData as any })
+        await updateMutation.mutateAsync({ id: editingUser.id, data: updateData })
         toast.success("User berhasil diupdate")
       } else {
         await createMutation.mutateAsync(data as UserCreateForm)

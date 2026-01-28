@@ -4,20 +4,20 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/stores"
 import { authService } from "@/services"
-import { ROLES, hasAnyRole, ROLE_COLORS, getPrimaryRole } from "@/lib/roles"
+import { ROLES, hasAnyRole, ROLE_COLORS, getPrimaryRole, type RoleName } from "@/lib/roles"
 import type { LucideIcon } from "lucide-react"
 
 interface MenuItem {
   to: string
   icon: LucideIcon
   label: string
-  roles?: string[] // If undefined, visible to all authenticated users
+  roles?: RoleName[] // If undefined, visible to all authenticated users
 }
 
 interface MenuSection {
   title?: string
   items: MenuItem[]
-  roles?: string[] // If undefined, visible to all authenticated users
+  roles?: RoleName[] // If undefined, visible to all authenticated users
 }
 
 const menuConfig: MenuSection[] = [
@@ -67,6 +67,19 @@ const menuConfig: MenuSection[] = [
       { to: "/laporan", icon: BarChart3, label: "Laporan & Analytics" },
     ],
   },
+  // Pengaturan - Superadmin only (except Jadwal Kontrol)
+  {
+    title: "Pengaturan",
+    roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA, ROLES.PERAWAT_ASISTEN, ROLES.DOKTER],
+    items: [
+      { to: "/pengaturan/template-pesan", icon: Database, label: "Template Pesan", roles: [ROLES.SUPERADMIN] },
+      { to: "/pengaturan/konfigurasi-pengingat", icon: Database, label: "Konfigurasi Pengingat", roles: [ROLES.SUPERADMIN] },
+      { to: "/pengaturan/konfigurasi-whatsapp", icon: Database, label: "Konfigurasi WhatsApp", roles: [ROLES.SUPERADMIN] },
+      { to: "/pengaturan/konfigurasi-sistem", icon: Database, label: "Konfigurasi Sistem", roles: [ROLES.SUPERADMIN] },
+      { to: "/pengaturan/faq", icon: Database, label: "FAQ", roles: [ROLES.SUPERADMIN] },
+      { to: "/pengaturan/jadwal-kontrol", icon: Calendar, label: "Jadwal Kontrol", roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA, ROLES.PERAWAT_ASISTEN, ROLES.DOKTER] },
+    ],
+  },
   // Master Data - Superadmin only
   {
     title: "Master Data",
@@ -97,12 +110,12 @@ export function Sidebar() {
 
   const canSeeSection = (section: MenuSection) => {
     if (!section.roles) return true
-    return hasAnyRole(userRoles, section.roles as any)
+    return hasAnyRole(userRoles, section.roles)
   }
 
   const canSeeItem = (item: MenuItem) => {
     if (!item.roles) return true
-    return hasAnyRole(userRoles, item.roles as any)
+    return hasAnyRole(userRoles, item.roles)
   }
 
   // Get role badge color
@@ -139,7 +152,7 @@ export function Sidebar() {
                     "[&.active]:bg-accent [&.active]:font-medium"
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon aria-hidden="true" className="h-4 w-4" />
                   {item.label}
                 </Link>
               ))}
@@ -161,7 +174,7 @@ export function Sidebar() {
           </div>
         </div>
         <Button variant="outline" className="w-full" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut aria-hidden="true" className="mr-2 h-4 w-4" />
           Logout
         </Button>
       </div>

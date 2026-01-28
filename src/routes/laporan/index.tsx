@@ -17,6 +17,7 @@ import {
   BarChart3,
   Hourglass,
   Calendar,
+  ChevronDown,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -32,7 +33,11 @@ import {
   useExportWaitingTime,
   useBusyHourReport,
   useExportBusyHour,
+  useUserActivityReport,
+  useExportUserActivity,
   usePolyList,
+  useStatusList,
+  useUserList,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,12 +45,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import type { ReportParams } from "@/types"
+import type { ReportParams, User } from "@/types"
 
 export const Route = createFileRoute("/laporan/")({
   component: LaporanPage,
@@ -59,16 +70,33 @@ function LaporanPage() {
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo)
   const [dateTo, setDateTo] = useState(today)
   const [selectedPolyId, setSelectedPolyId] = useState<number | undefined>(undefined)
+  const [insuranceType, setInsuranceType] = useState<"BPJS" | "GENERAL" | undefined>(undefined)
+  const [selectedStatusIds, setSelectedStatusIds] = useState<number[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(50)
 
   const { data: polyData } = usePolyList()
   const polies = polyData?.data || []
+  const { data: statusData } = useStatusList()
+  const statuses = statusData?.data || []
+  const { data: userData } = useUserList({ per_page: 100 })
+  const users = userData?.data || []
+
+  const toggleStatus = (id: number, checked: boolean) => {
+    setSelectedStatusIds((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)))
+    setPage(1)
+  }
 
   const reportParams: ReportParams = {
     date_from: dateFrom,
     date_to: dateTo,
     poly_id: selectedPolyId,
-    page: 1,
-    per_page: 50,
+    insurance_type: insuranceType,
+    status: selectedStatusIds.length > 0 ? selectedStatusIds : undefined,
+    user_id: selectedUserId,
+    page,
+    per_page: perPage,
   }
 
   return (
@@ -131,6 +159,87 @@ function LaporanPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1">
+              <Label>Asuransi</Label>
+              <Select
+                value={insuranceType ?? "all"}
+                onValueChange={(v) => setInsuranceType(v === "all" ? undefined : v === "BPJS" ? "BPJS" : "GENERAL")}
+              >
+                <SelectTrigger className="w-[160px] bg-background">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="BPJS">BPJS</SelectItem>
+                  <SelectItem value="GENERAL">Umum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Status</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-[180px] justify-between bg-background">
+                    {selectedStatusIds.length > 0 ? `${selectedStatusIds.length} dipilih` : "Semua"}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[200px]">
+                  {statuses.map((status) => (
+                    <DropdownMenuCheckboxItem
+                      key={status.id}
+                      checked={selectedStatusIds.includes(status.id)}
+                      onCheckedChange={(checked) => toggleStatus(status.id, Boolean(checked))}
+                    >
+                      {status.label ?? status.status_name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="space-y-1">
+              <Label>User</Label>
+              <Select
+                value={selectedUserId ? String(selectedUserId) : "all"}
+                onValueChange={(v) => setSelectedUserId(v === "all" ? undefined : Number(v))}
+              >
+                <SelectTrigger className="w-[180px] bg-background">
+                  <SelectValue placeholder="Semua User" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua User</SelectItem>
+                  {users.map((user: User) => (
+                    <SelectItem key={user.id} value={String(user.id)}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Page</Label>
+              <Input
+                type="number"
+                value={page}
+                min={1}
+                onChange={(e) => setPage(Math.max(1, Number(e.target.value) || 1))}
+                className="w-[100px] bg-background"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Per Page</Label>
+              <Input
+                type="number"
+                value={perPage}
+                min={1}
+                onChange={(e) => {
+                  const value = Math.max(1, Number(e.target.value) || 1)
+                  setPerPage(value)
+                  setPage(1)
+                }}
+                className="w-[120px] bg-background"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -162,6 +271,10 @@ function LaporanPage() {
             <Activity className="h-4 w-4" />
             Jam Sibuk
           </TabsTrigger>
+          <TabsTrigger value="user-activity" className="gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+            <Users className="h-4 w-4" />
+            Aktivitas User
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="patient-visits">
@@ -186,6 +299,10 @@ function LaporanPage() {
 
         <TabsContent value="busy-hour">
           <BusyHourReportSection params={reportParams} />
+        </TabsContent>
+
+        <TabsContent value="user-activity">
+          <UserActivityReportSection params={reportParams} />
         </TabsContent>
       </Tabs>
     </div>
@@ -1129,6 +1246,80 @@ function BusyHourReportSection({ params }: { params: ReportParams }) {
                       </TableRow>
                     )
                   })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function UserActivityReportSection({ params }: { params: ReportParams }) {
+  const { data, isLoading } = useUserActivityReport(params)
+  const exportMutation = useExportUserActivity()
+
+  const handleExport = async () => {
+    try {
+      await exportMutation.mutateAsync(params)
+      toast.success("Laporan berhasil diunduh")
+    } catch {
+      toast.error("Gagal mengunduh laporan")
+    }
+  }
+
+  if (isLoading) return <ReportSkeleton />
+
+  return (
+    <div className="space-y-4">
+      <Card className="pt-0 gap-0">
+        <CardHeader className="pt-6 bg-gradient-to-r from-slate-50 to-transparent border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-slate-700" />
+                Laporan Aktivitas User
+              </CardTitle>
+              <CardDescription>Aktivitas user berdasarkan filter</CardDescription>
+            </div>
+            <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
+              {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+              Export Excel
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {!data?.data || data.data.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="Tidak ada aktivitas"
+              description="Coba ubah filter atau rentang tanggal untuk melihat aktivitas user."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Aktivitas</TableHead>
+                    <TableHead>ID Reservasi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.data.map((item, i) => (
+                    <TableRow key={i} className="hover:bg-muted/30">
+                      <TableCell className="font-medium">{item.date}</TableCell>
+                      <TableCell>{item.user}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{item.role}</Badge>
+                      </TableCell>
+                      <TableCell>{item.activity}</TableCell>
+                      <TableCell>{item.reservation_id}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
