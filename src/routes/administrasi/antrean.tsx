@@ -26,13 +26,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PaginationControls } from "@/components/ui/pagination-controls"
 import { SchedulePicker, SelectedScheduleSummary } from "@/components/schedule"
 import { AntreanHeader } from "@/components/antrean"
+import { PatientAutocomplete } from "@/components/patient"
+import { PolySelect } from "@/components/poly"
 import { useAuthStore } from "@/stores/auth"
-import { cn } from "@/lib/utils"
+import { cn, sortPoliesWithUmumFirst, getDefaultPolyId } from "@/lib/utils"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Poly, Reservation, QueueStatusName, Schedule } from "@/types"
+import type { Poly, Reservation, QueueStatusName, Schedule, Patient } from "@/types"
 
 const EMPTY_POLIES: Poly[] = []
 const EMPTY_RESERVATIONS: Reservation[] = []
@@ -41,6 +44,8 @@ const antreanSearchSchema = z.object({
   polyId: z.number().optional(),
   date: z.string().optional(),
   scheduleId: z.number().optional(),
+  page: z.number().optional(),
+  perPage: z.number().optional(),
 })
 
 export const Route = createFileRoute("/administrasi/antrean")({
@@ -73,15 +78,22 @@ function AdministrasiAntreanPage() {
   const selectedPolyId = search.polyId ?? (user?.poly_id ?? null)
   const selectedDate = search.date ?? today
   const selectedScheduleId = search.scheduleId ?? null
+  const currentPage = search.page ?? 1
+  const perPage = search.perPage ?? 10
 
-  // Fetch reservations for selected date
-  const { data: reservationData, isLoading, refetch } = useReservationList({ date: selectedDate })
+  // Fetch reservations for selected date with pagination
+  const { data: reservationData, isLoading, refetch } = useReservationList({
+    date: selectedDate,
+    page: currentPage,
+    per_page: perPage,
+  })
   const { data: statusData } = useStatusList()
   const { data: polyData, isLoading: polyLoading } = usePolyList()
 
   // Realtime updates for selected poly
   useRealtimeQueue({
     polyId: selectedPolyId ?? 0,
+    polies: polyData?.data,
     enabled: selectedPolyId !== null,
   })
 
@@ -90,11 +102,11 @@ function AdministrasiAntreanPage() {
   const noShowMutation = useReservationToNoShow()
   const cancelledMutation = useReservationToCancelled()
 
-  // Set default poly if not set and we have polies
-  const polies = polyData?.data ?? EMPTY_POLIES
+  // Set default poly if not set and we have polies (Poli Umum as default)
+  const polies = useMemo(() => sortPoliesWithUmumFirst(polyData?.data ?? EMPTY_POLIES), [polyData?.data])
   useEffect(() => {
     if (!selectedPolyId && polies.length > 0 && !search.polyId) {
-      const defaultPolyId = user?.poly_id ?? polies[0]?.id
+      const defaultPolyId = getDefaultPolyId(polies, user?.poly_id)
       if (defaultPolyId) {
         navigate({
           search: (prev) => ({ ...prev, polyId: defaultPolyId }),
@@ -107,6 +119,19 @@ function AdministrasiAntreanPage() {
   // Filter state (for list view, can still show "all")
   const [filterPoly, setFilterPoly] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    navigate({
+      search: (prev) => ({ ...prev, page }),
+    })
+  }
+
+  const handlePerPageChange = (newPerPage: number) => {
+    navigate({
+      search: (prev) => ({ ...prev, perPage: newPerPage, page: 1 }),
+    })
+  }
 
   // Confirmation state
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -137,7 +162,7 @@ function AdministrasiAntreanPage() {
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      bpjs: false,
+      bpjs: true,
       date: selectedDate,
     },
   })
@@ -225,16 +250,16 @@ function AdministrasiAntreanPage() {
   const confirmAction = async () => {
     if (!pendingAction) return
     try {
-      const queueId = pendingAction.reservation.queue?.id
-      if (!queueId) {
-        toast.error("Data antrean tidak tersedia.")
+      const reservationId = pendingAction.reservation.id
+      if (!reservationId) {
+        toast.error("Data reservasi tidak tersedia.")
         return
       }
       if (pendingAction.action === "noshow") {
-        await noShowMutation.mutateAsync(queueId)
+        await noShowMutation.mutateAsync(reservationId)
         toast.success("Pasien ditandai tidak hadir")
       } else {
-        await cancelledMutation.mutateAsync(queueId)
+        await cancelledMutation.mutateAsync(reservationId)
         toast.success("Reservasi dibatalkan")
       }
     } catch (error: unknown) {
@@ -251,7 +276,7 @@ function AdministrasiAntreanPage() {
       whatsapp_number: "",
       email: "",
       no_bpjs: "",
-      bpjs: false,
+      bpjs: true,
       poly_id: selectedPolyId ?? undefined,
       schedule_id: undefined,
       date: selectedDate,
@@ -263,6 +288,16 @@ function AdministrasiAntreanPage() {
   const handleScheduleSelect = (scheduleId: number) => {
     setValue("schedule_id", scheduleId, { shouldValidate: true })
     setShowSchedulePicker(false)
+  }
+
+  const handlePatientSelect = (patient: Patient) => {
+    setValue("patient_name", patient.patient_name, { shouldValidate: true })
+    setValue("whatsapp_number", patient.whatsapp_number || "", { shouldValidate: true })
+    setValue("email", patient.email || "")
+    if (patient.no_bpjs) {
+      setValue("no_bpjs", patient.no_bpjs)
+      setValue("bpjs", true)
+    }
   }
 
   const onSubmit = handleSubmit(async (data) => {
@@ -438,6 +473,19 @@ function AdministrasiAntreanPage() {
             })
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {reservationData?.data && reservationData.data.total > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={reservationData.data.last_page}
+            onPageChange={handlePageChange}
+            perPage={perPage}
+            onPerPageChange={handlePerPageChange}
+            totalItems={reservationData.data.total}
+            isPending={isLoading}
+          />
+        )}
       </div>
 
       {/* Register Form Dialog */}
@@ -458,19 +506,19 @@ function AdministrasiAntreanPage() {
                   <div className="flex gap-2">
                     <Button
                       type="button"
-                      variant={!field.value ? "default" : "outline"}
-                      onClick={() => field.onChange(false)}
-                      className="flex-1"
-                    >
-                      Umum
-                    </Button>
-                    <Button
-                      type="button"
                       variant={field.value ? "default" : "outline"}
                       onClick={() => field.onChange(true)}
                       className="flex-1"
                     >
                       BPJS
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={!field.value ? "default" : "outline"}
+                      onClick={() => field.onChange(false)}
+                      className="flex-1"
+                    >
+                      Umum
                     </Button>
                   </div>
                 )}
@@ -479,7 +527,18 @@ function AdministrasiAntreanPage() {
 
             <div className="space-y-2">
               <Label htmlFor="patient_name">Nama Pasien</Label>
-              <Input id="patient_name" {...register("patient_name")} />
+              <Controller
+                name="patient_name"
+                control={control}
+                render={({ field }) => (
+                  <PatientAutocomplete
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    onPatientSelect={handlePatientSelect}
+                    placeholder="Cari atau ketik nama pasien..."
+                  />
+                )}
+              />
               {errors.patient_name && (
                 <p className="text-sm text-destructive">{errors.patient_name.message}</p>
               )}
@@ -521,35 +580,17 @@ function AdministrasiAntreanPage() {
                 </div>
                 <Label className="text-base font-semibold">Pilih Poli</Label>
               </div>
-              <Controller
-                name="poly_id"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    value={field.value ? String(field.value) : undefined}
-                    onValueChange={(v) => {
-                      field.onChange(Number(v))
-                      // Reset schedule when poly changes
-                      setValue("schedule_id", undefined as unknown as number)
-                      setShowSchedulePicker(true)
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      {polyLoading ? (
-                        <Skeleton className="h-4 w-20" />
-                      ) : (
-                        <SelectValue placeholder="Pilih poli tujuan" />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {polies.map((poly) => (
-                        <SelectItem key={poly.id} value={String(poly.id)}>
-                          {poly.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+              <PolySelect
+                value={formPolyId || undefined}
+                onChange={(value) => {
+                  if (value) {
+                    setValue("poly_id", value)
+                    // Reset schedule when poly changes
+                    setValue("schedule_id", undefined as unknown as number)
+                    setShowSchedulePicker(true)
+                  }
+                }}
+                placeholder="Pilih poli tujuan"
               />
               {errors.poly_id && (
                 <p className="text-sm text-destructive">{errors.poly_id.message}</p>
