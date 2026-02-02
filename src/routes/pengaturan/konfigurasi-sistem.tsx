@@ -128,8 +128,7 @@ function ConfigPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead>Nama</TableHead>
@@ -179,8 +178,7 @@ function ConfigPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>

@@ -176,8 +176,7 @@ function RolesPage() {
         </div>
       )}
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead className="w-16">ID</TableHead>
@@ -248,8 +247,7 @@ function RolesPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>

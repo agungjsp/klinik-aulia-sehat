@@ -3,7 +3,7 @@ import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Play, AlertTriangle } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import {
   useReservationList,
   useReservationToWithDoctor,
@@ -18,9 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AntreanHeader } from "@/components/antrean"
 import { useAuthStore } from "@/stores/auth"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Poly, Reservation, QueueStatusName } from "@/types"
-
-const EMPTY_POLIES: Poly[] = []
+import { sortPoliesWithUmumFirst, getDefaultPolyId } from "@/lib/utils"
+import type { Reservation, QueueStatusName } from "@/types"
 
 const antreanSearchSchema = z.object({
   polyId: z.number().optional(),
@@ -50,6 +49,7 @@ function PerawatAsistenAntreanPage() {
   // Realtime updates for selected poly
   useRealtimeQueue({
     polyId: selectedPolyId ?? 0,
+    polies: polyData?.data,
     enabled: selectedPolyId !== null,
   })
 
@@ -57,10 +57,13 @@ function PerawatAsistenAntreanPage() {
   const toNoShowMutation = useReservationToNoShow()
 
   // Set default poly if not set and we have polies
-  const polies = polyData?.data ?? EMPTY_POLIES
+  const polies = useMemo(
+    () => sortPoliesWithUmumFirst(polyData?.data ?? []),
+    [polyData?.data]
+  )
   useEffect(() => {
     if (!selectedPolyId && polies.length > 0 && !search.polyId) {
-      const defaultPolyId = user?.poly_id ?? polies[0]?.id
+      const defaultPolyId = getDefaultPolyId(polies, user?.poly_id)
       if (defaultPolyId) {
         navigate({
           search: (prev) => ({ ...prev, polyId: defaultPolyId }),
@@ -118,19 +121,23 @@ function PerawatAsistenAntreanPage() {
   }
 
   const handleCallPatient = async (reservation: Reservation) => {
-    const queueId = reservation.queue?.id
-    if (!queueId) {
-      toast.error("Data antrean tidak tersedia.")
+    const reservationId = reservation.id
+    if (!reservationId) {
+      toast.error("Data reservasi tidak tersedia.")
       return
     }
     try {
       const currentCallCount = getCallCount(reservation)
-      await toWithDoctorMutation.mutateAsync(queueId)
-      const newCallCount = currentCallCount + 1
-      if (newCallCount === 1) {
-        toast.success(`Memanggil pasien ${reservation.patient?.patient_name}`)
+      const result = await toWithDoctorMutation.mutateAsync(reservationId)
+      if (result.autoNoShow) {
+        toast.warning(`Pasien ${reservation.patient?.patient_name} tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW`)
       } else {
-        toast.info(`Panggilan ke-${newCallCount} untuk ${reservation.patient?.patient_name}`)
+        const newCallCount = currentCallCount + 1
+        if (newCallCount === 1) {
+          toast.success(`Memanggil pasien ${reservation.patient?.patient_name}`)
+        } else {
+          toast.info(`Panggilan ke-${newCallCount} untuk ${reservation.patient?.patient_name}`)
+        }
       }
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -138,13 +145,13 @@ function PerawatAsistenAntreanPage() {
   }
 
   const handleMarkNoShow = async (reservation: Reservation) => {
-    const queueId = reservation.queue?.id
-    if (!queueId) {
-      toast.error("Data antrean tidak tersedia.")
+    const reservationId = reservation.id
+    if (!reservationId) {
+      toast.error("Data reservasi tidak tersedia.")
       return
     }
     try {
-      await toNoShowMutation.mutateAsync(queueId)
+      await toNoShowMutation.mutateAsync(reservationId)
       toast.warning("Pasien ditandai tidak hadir")
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -280,7 +287,7 @@ function PerawatAsistenAntreanPage() {
                             Panggilan: {callCount}/3
                           </Badge>
                         )}
-                        {isFirst && callCount < 3 && (
+                        {isFirst && callCount < 3 && withDoctor.length === 0 && (
                           <Button
                             size="sm"
                             onClick={() => handleCallPatient(reservation)}
@@ -289,6 +296,9 @@ function PerawatAsistenAntreanPage() {
                             <Play className="mr-1 h-4 w-4" />
                             Panggil
                           </Button>
+                        )}
+                        {isFirst && withDoctor.length > 0 && (
+                          <Badge variant="secondary">Tunggu pasien selesai</Badge>
                         )}
                         {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
                       </div>

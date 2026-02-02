@@ -179,8 +179,7 @@ function PoliPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead className="w-16">ID</TableHead>
@@ -251,8 +250,7 @@ function PoliPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { useForm, Controller } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
 import { toast } from "sonner"
@@ -12,8 +12,6 @@ import {
   useUserUpdate,
   useUserDelete,
   useUserRestore,
-  useRoleList,
-  usePolyList,
   useDebouncedValue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
@@ -33,17 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PolySelect } from "@/components/poly"
+import { RoleCheckboxGroup } from "@/components/role"
 import { getApiErrorMessage } from "@/lib/api-error"
 import type { User } from "@/types"
 
@@ -91,8 +84,6 @@ function UsersPage() {
 
   const { data: userData, isLoading } = useUserList({ search: debouncedSearch || undefined })
   const { data: trashedData, isLoading: isLoadingTrashed } = useUserTrashed()
-  const { data: rolesData } = useRoleList()
-  const { data: polyData } = usePolyList()
 
   const createMutation = useUserCreate()
   const updateMutation = useUserUpdate()
@@ -103,7 +94,8 @@ function UsersPage() {
     register,
     handleSubmit,
     reset,
-    control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<UserCreateForm | UserUpdateForm>({
     resolver: zodResolver(editingUser ? userUpdateSchema : userCreateSchema),
@@ -174,8 +166,6 @@ function UsersPage() {
 
   const activeUsers = userData?.data || []
   const trashedUsers = trashedData?.data || []
-  const roles = rolesData?.data || []
-  const polies = polyData?.data || []
 
   return (
     <div className="space-y-6">
@@ -225,8 +215,7 @@ function UsersPage() {
         </div>
       )}
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead className="w-16">ID</TableHead>
@@ -292,8 +281,7 @@ function UsersPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-lg">
@@ -335,57 +323,21 @@ function UsersPage() {
 
             <div className="space-y-2">
               <Label>Role</Label>
-              <Controller
-                name="roles"
-                control={control}
-                render={({ field }) => (
-                  <div className="flex flex-wrap gap-2">
-                    {roles.map((role) => (
-                      <label key={role.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={field.value?.includes(role.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              field.onChange([...(field.value || []), role.id])
-                            } else {
-                              field.onChange(field.value?.filter((id) => id !== role.id) || [])
-                            }
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-sm">{role.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
+              <RoleCheckboxGroup
+                value={watch("roles") || []}
+                onChange={(value) => setValue("roles", value)}
               />
               {errors.roles && <p className="text-sm text-destructive">{errors.roles.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label>Poli (opsional)</Label>
-              <Controller
-                name="poly_id"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    value={field.value?.toString() || "none"}
-                    onValueChange={(v) => field.onChange(v === "none" ? null : Number(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih poli" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Tidak ada</SelectItem>
-                      {polies.map((poly) => (
-                        <SelectItem key={poly.id} value={poly.id.toString()}>
-                          {poly.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+              <PolySelect
+                value={watch("poly_id") ?? undefined}
+                onChange={(value) => setValue("poly_id", value ?? null)}
+                placeholder="Pilih poli"
+                allowNone
+                noneLabel="Tidak ada"
               />
             </div>
 

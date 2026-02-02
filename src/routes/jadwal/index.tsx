@@ -16,16 +16,16 @@ import {
 } from "date-fns"
 import { id } from "date-fns/locale"
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Users, AlertCircle } from "lucide-react"
-import { useScheduleList, useScheduleCreate, useScheduleUpdate, useScheduleDelete, useUserList } from "@/hooks"
+import { useScheduleList, useScheduleCreate, useScheduleUpdate, useScheduleDelete } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { DoctorSelect, useDoctorData } from "@/components/doctor"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api-error"
 import type { Schedule } from "@/types"
@@ -55,51 +55,31 @@ type ScheduleForm = z.infer<typeof scheduleSchema>
 
 function JadwalPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [selectedDoctor, setSelectedDoctor] = useState<string>("all")
+  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<number | undefined>(undefined)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
-  const { data: usersData, isLoading: isLoadingUsers } = useUserList({ per_page: 1000 })
-  const allUsers = usersData?.data || []
-  
-  // Filter users yang memiliki role "Dokter" atau "Doctor" (case insensitive)
-  const filteredDoctors = allUsers.filter((u) => 
-    u.roles?.some((r) => {
-      const roleName = r.name?.toLowerCase() || ""
-      return roleName === "dokter" || roleName === "doctor"
-    })
-  )
-
-  // Untuk edit: pastikan dokter dari schedule ada di list
-  let doctors = filteredDoctors
-  if (editingSchedule?.doctor && !doctors.some(d => d.id === editingSchedule.doctor_id)) {
-    doctors = [...doctors, editingSchedule.doctor as typeof doctors[0]]
-  }
-
   const { data: scheduleData, isLoading } = useScheduleList({
     month: currentMonth.getMonth() + 1,
     year: currentMonth.getFullYear(),
-    doctor_id: selectedDoctor !== "all" ? Number(selectedDoctor) : undefined,
+    doctor_id: selectedDoctorFilter,
   })
 
   const createMutation = useScheduleCreate()
   const updateMutation = useScheduleUpdate()
   const deleteMutation = useScheduleDelete()
 
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ScheduleForm>({
+  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ScheduleForm>({
     resolver: zodResolver(scheduleSchema),
   })
 
   const watchedDoctorId = watch("doctor_id")
   const watchedQuota = watch("quota")
 
-  // Check if selected doctor is from Poli Gigi
-  const selectedDoctorData = useMemo(() => {
-    if (!watchedDoctorId) return null
-    return doctors.find((d) => d.id === watchedDoctorId) || null
-  }, [watchedDoctorId, doctors])
+  // Use the custom hook to get doctor data for validation
+  const selectedDoctorData = useDoctorData(watchedDoctorId)
 
   const isSelectedDoctorPoliGigi = useMemo(() => {
     return isPolyGigi(selectedDoctorData?.poly?.name)
@@ -217,17 +197,14 @@ function JadwalPage() {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter dokter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Dokter</SelectItem>
-            {doctors.map((doc) => (
-              <SelectItem key={doc.id} value={doc.id.toString()}>{doc.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <DoctorSelect
+          value={selectedDoctorFilter}
+          onChange={setSelectedDoctorFilter}
+          className="w-[200px]"
+          showAll
+          allLabel="Semua Dokter"
+          placeholder="Filter dokter"
+        />
       </div>
 
       {/* Calendar Grid */}
@@ -375,44 +352,11 @@ function JadwalPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Dokter</Label>
-              <Controller
-                name="doctor_id"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    value={field.value ? String(field.value) : undefined}
-                    onValueChange={(v) => field.onChange(Number(v))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={isLoadingUsers ? "Memuat..." : "Pilih dokter"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingUsers ? (
-                        <SelectItem value="__loading" disabled>Memuat data...</SelectItem>
-                      ) : doctors.length === 0 ? (
-                        <SelectItem value="__empty" disabled>Tidak ada dokter</SelectItem>
-                      ) : (
-                        doctors.map((doc) => (
-                          <SelectItem key={doc.id} value={String(doc.id)}>
-                            <div className="flex items-center gap-2">
-                              <span>{doc.name}</span>
-                              {doc.poly && (
-                                <span className={cn(
-                                  "text-xs px-1.5 py-0.5 rounded",
-                                  isPolyGigi(doc.poly.name) 
-                                    ? "bg-pink-100 text-pink-700" 
-                                    : "bg-muted text-muted-foreground"
-                                )}>
-                                  {doc.poly.name}
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
+              <DoctorSelect
+                value={watchedDoctorId}
+                onChange={(value) => setValue("doctor_id", value as number)}
+                placeholder="Pilih dokter"
+                showPolyBadge
               />
               {errors.doctor_id && <p className="text-sm text-destructive">{errors.doctor_id.message}</p>}
               {isSelectedDoctorPoliGigi && (

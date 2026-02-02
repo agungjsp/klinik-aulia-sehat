@@ -146,8 +146,7 @@ function MessageTemplatePage() {
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead>Nama</TableHead>
@@ -197,8 +196,7 @@ function MessageTemplatePage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       {pagination && (
         <PaginationControls

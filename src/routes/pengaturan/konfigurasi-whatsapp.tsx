@@ -128,8 +128,7 @@ function WhatsappConfigPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead>Nomor WhatsApp</TableHead>
@@ -179,8 +178,7 @@ function WhatsappConfigPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>

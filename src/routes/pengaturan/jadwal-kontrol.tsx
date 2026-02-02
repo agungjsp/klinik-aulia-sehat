@@ -1,22 +1,22 @@
 import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
+import { format } from "date-fns"
 import { Plus, Pencil, Trash2, Search } from "lucide-react"
 import {
   useCheckupScheduleList,
   useCheckupScheduleCreate,
   useCheckupScheduleUpdate,
   useCheckupScheduleDelete,
-  usePatientList,
-  usePolyList,
   useDebouncedValue,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -34,15 +34,11 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { PatientAutocomplete } from "@/components/patient"
+import { PolySelect } from "@/components/poly"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { CheckupSchedule } from "@/types"
+import type { CheckupSchedule, Patient } from "@/types"
 
 export const Route = createFileRoute("/pengaturan/jadwal-kontrol")({
   component: CheckupSchedulePage,
@@ -50,9 +46,10 @@ export const Route = createFileRoute("/pengaturan/jadwal-kontrol")({
 
 const checkupScheduleSchema = z.object({
   patient_id: z.number().min(1, "Pasien wajib dipilih"),
+  patient_name: z.string().min(1, "Nama pasien wajib diisi"),
   poly_id: z.number().min(1, "Poli wajib dipilih"),
   date: z.string().min(1, "Tanggal wajib diisi"),
-  description: z.string().min(1, "Deskripsi wajib diisi"),
+  description: z.string().optional(),
 })
 
 type CheckupScheduleForm = z.infer<typeof checkupScheduleSchema>
@@ -72,37 +69,35 @@ function CheckupSchedulePage() {
     per_page: perPage,
   })
 
-  const { data: patientsData } = usePatientList()
-  const { data: poliesData } = usePolyList()
-
   const createMutation = useCheckupScheduleCreate()
   const updateMutation = useCheckupScheduleUpdate()
   const deleteMutation = useCheckupScheduleDelete()
 
   const {
-    register,
     handleSubmit,
     reset,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<CheckupScheduleForm>({
     resolver: zodResolver(checkupScheduleSchema),
     defaultValues: {
       patient_id: 0,
+      patient_name: "",
       poly_id: 0,
       date: "",
       description: "",
     },
   })
 
-  const patients = patientsData?.data?.data || []
-  const polies = poliesData?.data || []
+  const formPolyId = watch("poly_id")
 
   const openCreateForm = () => {
     setEditingSchedule(null)
     reset({
       patient_id: 0,
+      patient_name: "",
       poly_id: 0,
       date: "",
       description: "",
@@ -114,6 +109,7 @@ function CheckupSchedulePage() {
     setEditingSchedule(schedule)
     reset({
       patient_id: schedule.patient_id,
+      patient_name: schedule.patient?.patient_name || "",
       poly_id: schedule.poly_id,
       date: schedule.date,
       description: schedule.description,
@@ -121,16 +117,29 @@ function CheckupSchedulePage() {
     setIsFormOpen(true)
   }
 
+  // Handle patient selection from autocomplete
+  const handlePatientSelect = (patient: Patient) => {
+    setValue("patient_id", patient.id)
+    setValue("patient_name", patient.patient_name)
+  }
+
   const onSubmit = async (formData: CheckupScheduleForm) => {
     try {
+      const payload = {
+        patient_id: formData.patient_id,
+        poly_id: formData.poly_id,
+        date: formData.date,
+        description: formData.description || "",
+      }
+
       if (editingSchedule) {
         await updateMutation.mutateAsync({
           id: editingSchedule.id,
-          data: formData,
+          data: payload,
         })
         toast.success("Jadwal kontrol berhasil diperbarui")
       } else {
-        await createMutation.mutateAsync(formData)
+        await createMutation.mutateAsync(payload)
         toast.success("Jadwal kontrol berhasil ditambahkan")
       }
       setIsFormOpen(false)
@@ -176,8 +185,7 @@ function CheckupSchedulePage() {
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead>Pasien</TableHead>
@@ -235,8 +243,7 @@ function CheckupSchedulePage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       {pagination && (
         <PaginationControls
@@ -252,80 +259,88 @@ function CheckupSchedulePage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingSchedule ? "Edit Jadwal" : "Tambah Jadwal"}
+              {editingSchedule ? "Edit Jadwal Kontrol" : "Tambah Jadwal Kontrol"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Patient Autocomplete */}
             <div className="space-y-2">
-              <Label htmlFor="patient_id">Pasien</Label>
-              <Select
-                value={watch("patient_id")?.toString() || ""}
-                onValueChange={(value) => setValue("patient_id", parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih pasien" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id.toString()}>
-                      {patient.patient_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Nama Pasien</Label>
+              <Controller
+                name="patient_name"
+                control={control}
+                render={({ field }) => (
+                  <PatientAutocomplete
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    onPatientSelect={handlePatientSelect}
+                    placeholder="Cari nama pasien..."
+                    disabled={!!editingSchedule}
+                  />
+                )}
+              />
               {errors.patient_id && (
                 <p className="text-sm text-destructive">{errors.patient_id.message}</p>
               )}
+              {errors.patient_name && (
+                <p className="text-sm text-destructive">{errors.patient_name.message}</p>
+              )}
             </div>
 
+            {/* Poly Select */}
             <div className="space-y-2">
-              <Label htmlFor="poly_id">Poli</Label>
-              <Select
-                value={watch("poly_id")?.toString() || ""}
-                onValueChange={(value) => setValue("poly_id", parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih poli" />
-                </SelectTrigger>
-                <SelectContent>
-                  {polies.map((poly) => (
-                    <SelectItem key={poly.id} value={poly.id.toString()}>
-                      {poly.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Poli</Label>
+              <PolySelect
+                value={formPolyId || undefined}
+                onChange={(value) => {
+                  if (value) setValue("poly_id", value)
+                }}
+                placeholder="Pilih poli tujuan"
+              />
               {errors.poly_id && (
                 <p className="text-sm text-destructive">{errors.poly_id.message}</p>
               )}
             </div>
 
+            {/* Date */}
             <div className="space-y-2">
-              <Label htmlFor="date">Tanggal</Label>
-              <Input
-                id="date"
-                type="date"
-                {...register("date")}
+              <Label htmlFor="date">Tanggal Kontrol</Label>
+              <Controller
+                name="date"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="date"
+                    type="date"
+                    min={format(new Date(), "yyyy-MM-dd")}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
               />
               {errors.date && (
                 <p className="text-sm text-destructive">{errors.date.message}</p>
               )}
             </div>
 
+            {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Deskripsi</Label>
-              <textarea
-                id="description"
-                {...register("description")}
-                placeholder="Masukkan deskripsi"
-                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label htmlFor="description">Keterangan (opsional)</Label>
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <Textarea
+                    id="description"
+                    placeholder="Contoh: Kontrol tekanan darah, cek hasil lab, dll."
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                  />
+                )}
               />
-              {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
-              )}
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
@@ -337,6 +352,9 @@ function CheckupSchedulePage() {
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
+                {(createMutation.isPending || updateMutation.isPending) && (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                )}
                 {editingSchedule ? "Simpan" : "Tambah"}
               </Button>
             </div>

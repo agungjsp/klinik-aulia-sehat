@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, Calendar, CheckCircle, XCircle, Clock, Activity } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, sortPoliesWithUmumFirst } from "@/lib/utils"
 import type { Poly, DashboardTrendItem, DashboardSummaryItem, DashboardReservationsByPolyItem, DashboardPatientAttendance, DashboardAverageWaitingTimeItem, DashboardPeakHourItem, DashboardBpjsVsGeneralItem } from "@/types"
 import {
   Area,
@@ -129,7 +129,7 @@ function DashboardPage() {
     poly_id: selectedPolyId,
   })
 
-  const polies = polyData?.data ?? EMPTY_POLIES
+  const polies = useMemo(() => sortPoliesWithUmumFirst(polyData?.data ?? EMPTY_POLIES), [polyData?.data])
   const summary = summaryData?.data || []
   const trend = trendData?.data ?? EMPTY_TREND
   const polyDist = polyDistData?.data ?? EMPTY_POLY_DIST

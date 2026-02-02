@@ -159,8 +159,7 @@ function ReminderConfigPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <Table variant="comfortable">
           <TableHeader>
             <TableRow>
               <TableHead>Template Pesan</TableHead>
@@ -218,8 +217,7 @@ function ReminderConfigPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       {pagination && (
         <PaginationControls

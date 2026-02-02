@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { z } from "zod/v4"
 import { toast } from "sonner"
@@ -19,9 +19,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AntreanHeader } from "@/components/antrean"
 import { useAuthStore } from "@/stores/auth"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Poly, Reservation, QueueStatusName } from "@/types"
-
-const EMPTY_POLIES: Poly[] = []
+import { sortPoliesWithUmumFirst, getDefaultPolyId } from "@/lib/utils"
+import type { Reservation, QueueStatusName } from "@/types"
 
 const antreanSearchSchema = z.object({
   polyId: z.number().optional(),
@@ -51,6 +50,7 @@ function PerawatAntreanPage() {
   // Realtime updates for selected poly
   useRealtimeQueue({
     polyId: selectedPolyId ?? 0,
+    polies: polyData?.data,
     enabled: selectedPolyId !== null,
   })
 
@@ -58,10 +58,13 @@ function PerawatAntreanPage() {
   const toWaitingDoctorMutation = useReservationToWaitingDoctor()
 
   // Set default poly if not set and we have polies
-  const polies = polyData?.data ?? EMPTY_POLIES
+  const polies = useMemo(
+    () => sortPoliesWithUmumFirst(polyData?.data ?? []),
+    [polyData?.data]
+  )
   useEffect(() => {
     if (!selectedPolyId && polies.length > 0 && !search.polyId) {
-      const defaultPolyId = user?.poly_id ?? polies[0]?.id
+      const defaultPolyId = getDefaultPolyId(polies, user?.poly_id)
       if (defaultPolyId) {
         navigate({
           search: (prev) => ({ ...prev, polyId: defaultPolyId }),
@@ -123,18 +126,22 @@ function PerawatAntreanPage() {
 
   const confirmAction = async () => {
     if (!pendingAction) return
-    const queueId = pendingAction.reservation.queue?.id
-    if (!queueId) {
-      toast.error("Data antrean tidak tersedia.")
+    const reservationId = pendingAction.reservation.id
+    if (!reservationId) {
+      toast.error("Data reservasi tidak tersedia.")
       return
     }
 
     try {
       if (pendingAction.action === "anamnesa") {
-        await toAnamnesaMutation.mutateAsync(queueId)
-        toast.success("Pasien dipanggil untuk anamnesa")
+        const result = await toAnamnesaMutation.mutateAsync(reservationId)
+        if (result.autoNoShow) {
+          toast.warning("Pasien tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW")
+        } else {
+          toast.success("Pasien dipanggil untuk anamnesa")
+        }
       } else {
-        await toWaitingDoctorMutation.mutateAsync(queueId)
+        await toWaitingDoctorMutation.mutateAsync(reservationId)
         toast.success("Anamnesa selesai, pasien menunggu dokter")
       }
     } catch (error: unknown) {
@@ -244,7 +251,7 @@ function PerawatAntreanPage() {
                       </p>
                     </div>
                   </div>
-                  {idx === 0 && (
+                  {idx === 0 && inAnamnesa.length === 0 && (
                     <Button
                       size="sm"
                       onClick={() =>
@@ -260,6 +267,9 @@ function PerawatAntreanPage() {
                       <Play className="mr-1 h-4 w-4" />
                       Panggil
                     </Button>
+                  )}
+                  {idx === 0 && inAnamnesa.length > 0 && (
+                    <Badge variant="secondary">Tunggu pasien selesai</Badge>
                   )}
                   {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
                 </div>

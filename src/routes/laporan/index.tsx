@@ -506,8 +506,7 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
               description="Coba perluas rentang tanggal atau ubah filter poli untuk melihat data kunjungan pasien."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -540,8 +539,7 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -644,8 +642,7 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
               description="Tidak ada pasien yang tidak hadir atau membatalkan reservasi pada periode ini."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -682,8 +679,7 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -784,8 +780,7 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
               description="Coba perluas rentang tanggal untuk melihat perbandingan pasien BPJS vs Umum."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -822,8 +817,7 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -924,8 +918,7 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
               description="Coba perluas rentang tanggal untuk melihat statistik performa poli."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -960,8 +953,7 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -1067,8 +1059,7 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
               description="Coba perluas rentang tanggal untuk melihat statistik waktu tunggu."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -1103,8 +1094,7 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -1226,8 +1216,7 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
               description="Coba perluas rentang tanggal untuk melihat distribusi jam sibuk."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -1294,8 +1283,7 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
                     )
                   })}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -1356,8 +1344,7 @@ function UserActivityReportSection({ params, page, perPage, setPage, setPerPage 
               description="Coba ubah filter atau rentang tanggal untuk melihat aktivitas user."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table variant="report">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tanggal</TableHead>
@@ -1380,8 +1367,7 @@ function UserActivityReportSection({ params, page, perPage, setPage, setPerPage 
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>

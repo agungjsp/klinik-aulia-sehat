@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { Play, CheckCircle } from "lucide-react"
+import { Play, CheckCircle, CalendarPlus } from "lucide-react"
 import {
   useReservationList,
   useReservationToWithDoctor,
@@ -11,22 +13,42 @@ import {
   useStatusList,
   usePolyList,
   useRealtimeQueue,
+  useCheckupScheduleCreate,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { AntreanHeader } from "@/components/antrean"
 import { useAuthStore } from "@/stores/auth"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Poly, Reservation, QueueStatusName } from "@/types"
-
-const EMPTY_POLIES: Poly[] = []
+import { sortPoliesWithUmumFirst, getDefaultPolyId } from "@/lib/utils"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import type { Reservation, QueueStatusName } from "@/types"
 
 const antreanSearchSchema = z.object({
   polyId: z.number().optional(),
   date: z.string().optional(),
 })
+
+// Schema for follow-up schedule form
+const followUpSchema = z.object({
+  date: z.string().min(1, "Tanggal wajib diisi"),
+  description: z.string().optional(),
+})
+
+type FollowUpForm = z.infer<typeof followUpSchema>
 
 export const Route = createFileRoute("/dokter/antrean")({
   component: DokterAntreanPage,
@@ -51,17 +73,36 @@ function DokterAntreanPage() {
   // Realtime updates for selected poly
   useRealtimeQueue({
     polyId: selectedPolyId ?? 0,
+    polies: polyData?.data,
     enabled: selectedPolyId !== null,
   })
 
   const toWithDoctorMutation = useReservationToWithDoctor()
   const toDoneMutation = useReservationToDone()
+  const checkupScheduleCreateMutation = useCheckupScheduleCreate()
+
+  // Follow-up schedule dialog state
+  const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false)
+  const [completedReservation, setCompletedReservation] = useState<Reservation | null>(null)
+  const [showFollowUpForm, setShowFollowUpForm] = useState(false)
+
+  const {
+    register: registerFollowUp,
+    handleSubmit: handleFollowUpSubmit,
+    reset: resetFollowUp,
+    formState: { errors: followUpErrors },
+  } = useForm<FollowUpForm>({
+    resolver: zodResolver(followUpSchema),
+  })
 
   // Set default poly if not set and we have polies
-  const polies = polyData?.data ?? EMPTY_POLIES
+  const polies = useMemo(
+    () => sortPoliesWithUmumFirst(polyData?.data ?? []),
+    [polyData?.data]
+  )
   useEffect(() => {
     if (!selectedPolyId && polies.length > 0 && !search.polyId) {
-      const defaultPolyId = user?.poly_id ?? polies[0]?.id
+      const defaultPolyId = getDefaultPolyId(polies, user?.poly_id)
       if (defaultPolyId) {
         navigate({
           search: (prev) => ({ ...prev, polyId: defaultPolyId }),
@@ -123,27 +164,72 @@ function DokterAntreanPage() {
 
   const confirmAction = async () => {
     if (!pendingAction) return
-    const queueId = pendingAction.reservation.queue?.id
-    if (!queueId) {
-      toast.error("Data antrean tidak tersedia.")
+    const reservationId = pendingAction.reservation.id
+    if (!reservationId) {
+      toast.error("Data reservasi tidak tersedia.")
       return
     }
 
     try {
       if (pendingAction.action === "withdoctor") {
-        await toWithDoctorMutation.mutateAsync(queueId)
-        toast.success("Pasien dipanggil untuk konsultasi")
+        const result = await toWithDoctorMutation.mutateAsync(reservationId)
+        if (result.autoNoShow) {
+          toast.warning("Pasien tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW")
+        } else {
+          toast.success("Pasien dipanggil untuk konsultasi")
+        }
+        setConfirmOpen(false)
+        setPendingAction(null)
       } else {
-        await toDoneMutation.mutateAsync(queueId)
+        await toDoneMutation.mutateAsync(reservationId)
         toast.success("Konsultasi selesai")
+        setConfirmOpen(false)
+        // Show follow-up dialog after consultation is done
+        setCompletedReservation(pendingAction.reservation)
+        setFollowUpDialogOpen(true)
+        setPendingAction(null)
       }
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
-    } finally {
       setConfirmOpen(false)
       setPendingAction(null)
     }
   }
+
+  // Handle closing follow-up dialog (no follow-up needed)
+  const handleCloseFollowUpDialog = () => {
+    setFollowUpDialogOpen(false)
+    setCompletedReservation(null)
+    setShowFollowUpForm(false)
+    resetFollowUp()
+  }
+
+  // Handle showing the follow-up form
+  const handleShowFollowUpForm = () => {
+    setShowFollowUpForm(true)
+    resetFollowUp({ date: "", description: "" })
+  }
+
+  // Handle submitting follow-up schedule
+  const onFollowUpSubmit = handleFollowUpSubmit(async (data) => {
+    if (!completedReservation?.patient_id || !completedReservation?.poly_id) {
+      toast.error("Data pasien tidak tersedia")
+      return
+    }
+
+    try {
+      await checkupScheduleCreateMutation.mutateAsync({
+        patient_id: completedReservation.patient_id,
+        poly_id: completedReservation.poly_id,
+        date: data.date,
+        description: data.description || "",
+      })
+      toast.success("Jadwal kontrol berhasil ditambahkan")
+      handleCloseFollowUpDialog()
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error))
+    }
+  })
 
   // Helper to format queue number
   const formatQueueNumber = (num: number | string) => String(num).padStart(3, "0")
@@ -244,7 +330,7 @@ function DokterAntreanPage() {
                       </p>
                     </div>
                   </div>
-                  {idx === 0 && (
+                  {idx === 0 && inConsultation.length === 0 && (
                     <Button
                       size="sm"
                       onClick={() =>
@@ -261,6 +347,9 @@ function DokterAntreanPage() {
                       Panggil
                     </Button>
                   )}
+                  {idx === 0 && inConsultation.length > 0 && (
+                    <Badge variant="secondary">Tunggu pasien selesai</Badge>
+                  )}
                   {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
                 </div>
               ))
@@ -276,6 +365,85 @@ function DokterAntreanPage() {
         description={pendingAction?.description || ""}
         onConfirm={confirmAction}
       />
+
+      {/* Follow-up Schedule Dialog */}
+      <Dialog open={followUpDialogOpen} onOpenChange={handleCloseFollowUpDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5" />
+              Jadwal Kontrol
+            </DialogTitle>
+            <DialogDescription>
+              Apakah pasien <span className="font-semibold">{completedReservation?.patient?.patient_name}</span> perlu dijadwalkan untuk kontrol berikutnya?
+            </DialogDescription>
+          </DialogHeader>
+
+          {!showFollowUpForm ? (
+            <DialogFooter className="flex gap-2 sm:justify-center">
+              <Button variant="outline" onClick={handleCloseFollowUpDialog}>
+                Tidak Perlu
+              </Button>
+              <Button onClick={handleShowFollowUpForm}>
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Ya, Jadwalkan
+              </Button>
+            </DialogFooter>
+          ) : (
+            <form onSubmit={onFollowUpSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nama Pasien</Label>
+                <Input 
+                  value={completedReservation?.patient?.patient_name || ""} 
+                  disabled 
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Poli</Label>
+                <Input 
+                  value={completedReservation?.poly?.name || ""} 
+                  disabled 
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="follow-up-date">Tanggal Kontrol</Label>
+                <Input 
+                  id="follow-up-date"
+                  type="date" 
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  {...registerFollowUp("date")} 
+                />
+                {followUpErrors.date && (
+                  <p className="text-sm text-destructive">{followUpErrors.date.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="follow-up-description">Keterangan (opsional)</Label>
+                <Textarea 
+                  id="follow-up-description"
+                  placeholder="Contoh: Kontrol tekanan darah, cek hasil lab, dll."
+                  {...registerFollowUp("description")} 
+                />
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowFollowUpForm(false)}>
+                  Kembali
+                </Button>
+                <Button type="submit" disabled={checkupScheduleCreateMutation.isPending}>
+                  {checkupScheduleCreateMutation.isPending && <LoadingSpinner size="sm" className="mr-2" />}
+                  Simpan Jadwal
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

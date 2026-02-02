@@ -8,6 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+type TableVariant = "default" | "comfortable" | "report"
+
 interface TableSkeletonProps {
   /**
    * Number of rows to render
@@ -29,6 +31,12 @@ interface TableSkeletonProps {
    * @example ["w-16", "w-32", "w-24", "w-20"]
    */
   columnWidths?: string[]
+
+  /**
+   * Visual variant to match table density.
+   * @default "default"
+   */
+  variant?: TableVariant
 }
 
 export function TableSkeleton({
@@ -36,6 +44,7 @@ export function TableSkeleton({
   columns = 4,
   showHeader = true,
   columnWidths,
+  variant = "default",
 }: TableSkeletonProps) {
   const getColumnWidth = (index: number) => {
     if (columnWidths && columnWidths[index]) {
@@ -48,7 +57,7 @@ export function TableSkeleton({
   }
 
   return (
-    <Table>
+    <Table variant={variant}>
       {showHeader && (
         <TableHeader>
           <TableRow>

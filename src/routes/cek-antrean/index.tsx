@@ -17,7 +17,7 @@ export const Route = createFileRoute("/cek-antrean/")({
 
 function CekAntreanPage() {
   const today = format(new Date(), "yyyy-MM-dd")
-  const [searchType, setSearchType] = useState<"whatsapp" | "bpjs">("whatsapp")
+  const [searchType, setSearchType] = useState<"whatsapp" | "bpjs">("bpjs")
   const [searchValue, setSearchValue] = useState("")
   const [submittedSearch, setSubmittedSearch] = useState<{
     type: "whatsapp" | "bpjs"
@@ -96,18 +96,6 @@ function CekAntreanPage() {
         {/* Search Type Tabs */}
         <div className="flex gap-2 mb-4">
           <Button
-            variant={searchType === "whatsapp" ? "default" : "outline"}
-            onClick={() => {
-              setSearchType("whatsapp")
-              setSearchValue("")
-              setSubmittedSearch(null)
-            }}
-            className="flex-1"
-          >
-            <Phone className="h-4 w-4 mr-2" />
-            No. WhatsApp
-          </Button>
-          <Button
             variant={searchType === "bpjs" ? "default" : "outline"}
             onClick={() => {
               setSearchType("bpjs")
@@ -118,6 +106,18 @@ function CekAntreanPage() {
           >
             <CreditCard className="h-4 w-4 mr-2" />
             No. BPJS
+          </Button>
+          <Button
+            variant={searchType === "whatsapp" ? "default" : "outline"}
+            onClick={() => {
+              setSearchType("whatsapp")
+              setSearchValue("")
+              setSubmittedSearch(null)
+            }}
+            className="flex-1"
+          >
+            <Phone className="h-4 w-4 mr-2" />
+            No. WhatsApp
           </Button>
         </div>
 
