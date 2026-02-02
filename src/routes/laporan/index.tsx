@@ -35,9 +35,7 @@ import {
   useExportBusyHour,
   useUserActivityReport,
   useExportUserActivity,
-  usePolyList,
   useStatusList,
-  useUserList,
 } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,8 +53,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Badge } from "@/components/ui/badge"
+import { PaginationControls } from "@/components/ui/pagination-controls"
+import { PolySelect } from "@/components/poly"
+import { UserSelect } from "@/components/user"
 import { cn } from "@/lib/utils"
-import type { ReportParams, User } from "@/types"
+import type { ReportParams } from "@/types"
 
 export const Route = createFileRoute("/laporan/")({
   component: LaporanPage,
@@ -76,12 +77,8 @@ function LaporanPage() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(50)
 
-  const { data: polyData } = usePolyList()
-  const polies = polyData?.data || []
   const { data: statusData } = useStatusList()
   const statuses = statusData?.data || []
-  const { data: userData } = useUserList({ per_page: 100 })
-  const users = userData?.data || []
 
   const toggleStatus = (id: number, checked: boolean) => {
     setSelectedStatusIds((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)))
@@ -142,22 +139,14 @@ function LaporanPage() {
             </div>
             <div className="space-y-1">
               <Label>Poli</Label>
-              <Select
-                value={selectedPolyId ? String(selectedPolyId) : "all"}
-                onValueChange={(v) => setSelectedPolyId(v === "all" ? undefined : Number(v))}
-              >
-                <SelectTrigger className="w-[150px] bg-background">
-                  <SelectValue placeholder="Semua Poli" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Poli</SelectItem>
-                  {polies.map((poly) => (
-                    <SelectItem key={poly.id} value={String(poly.id)}>
-                      {poly.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PolySelect
+                value={selectedPolyId}
+                onChange={setSelectedPolyId}
+                className="w-[150px] bg-background"
+                showAll
+                allLabel="Semua Poli"
+                showIcon={false}
+              />
             </div>
             <div className="space-y-1">
               <Label>Asuransi</Label>
@@ -199,22 +188,14 @@ function LaporanPage() {
             </div>
             <div className="space-y-1">
               <Label>User</Label>
-              <Select
-                value={selectedUserId ? String(selectedUserId) : "all"}
-                onValueChange={(v) => setSelectedUserId(v === "all" ? undefined : Number(v))}
-              >
-                <SelectTrigger className="w-[180px] bg-background">
-                  <SelectValue placeholder="Semua User" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua User</SelectItem>
-                  {users.map((user: User) => (
-                    <SelectItem key={user.id} value={String(user.id)}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <UserSelect
+                value={selectedUserId}
+                onChange={setSelectedUserId}
+                className="w-[180px] bg-background"
+                showAll
+                allLabel="Semua User"
+                showIcon={false}
+              />
             </div>
             <div className="space-y-1">
               <Label>Page</Label>
@@ -278,31 +259,31 @@ function LaporanPage() {
         </TabsList>
 
         <TabsContent value="patient-visits">
-          <PatientVisitsReportSection params={reportParams} />
+          <PatientVisitsReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
 
         <TabsContent value="no-show">
-          <NoShowReportSection params={reportParams} />
+          <NoShowReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
 
         <TabsContent value="bpjs">
-          <BpjsReportSection params={reportParams} />
+          <BpjsReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
 
         <TabsContent value="poly-performance">
-          <PolyPerformanceReportSection params={reportParams} />
+          <PolyPerformanceReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
 
         <TabsContent value="waiting-time">
-          <WaitingTimeReportSection params={reportParams} />
+          <WaitingTimeReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
 
         <TabsContent value="busy-hour">
-          <BusyHourReportSection params={reportParams} />
+          <BusyHourReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
 
         <TabsContent value="user-activity">
-          <UserActivityReportSection params={reportParams} />
+          <UserActivityReportSection params={reportParams} page={page} perPage={perPage} setPage={setPage} setPerPage={setPerPage} />
         </TabsContent>
       </Tabs>
     </div>
@@ -437,7 +418,13 @@ function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
 // Report Sections
 // ============================================
 
-function PatientVisitsReportSection({ params }: { params: ReportParams }) {
+function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage }: { 
+  params: ReportParams
+  page: number
+  perPage: number
+  setPage: (page: number) => void
+  setPerPage: (perPage: number) => void
+}) {
   const { data, isLoading } = usePatientVisitsReport(params)
   const exportMutation = useExportPatientVisits()
 
@@ -558,11 +545,23 @@ function PatientVisitsReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
 
-function NoShowReportSection({ params }: { params: ReportParams }) {
+function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
   const { data, isLoading } = useNoShowCancelledReport(params)
   const exportMutation = useExportNoShowCancelled()
 
@@ -688,11 +687,23 @@ function NoShowReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
 
-function BpjsReportSection({ params }: { params: ReportParams }) {
+function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
   const { data, isLoading } = useBpjsVsGeneralReport(params)
   const exportMutation = useExportBpjsVsGeneral()
 
@@ -816,11 +827,23 @@ function BpjsReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
 
-function PolyPerformanceReportSection({ params }: { params: ReportParams }) {
+function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
   const { data, isLoading } = usePolyPerformanceReport(params)
   const exportMutation = useExportPolyPerformance()
 
@@ -942,11 +965,23 @@ function PolyPerformanceReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
 
-function WaitingTimeReportSection({ params }: { params: ReportParams }) {
+function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
   const { data, isLoading } = useWaitingTimeReport(params)
   const exportMutation = useExportWaitingTime()
 
@@ -1073,11 +1108,23 @@ function WaitingTimeReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
 
-function BusyHourReportSection({ params }: { params: ReportParams }) {
+function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
   const { data, isLoading } = useBusyHourReport(params)
   const exportMutation = useExportBusyHour()
 
@@ -1252,11 +1299,23 @@ function BusyHourReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
 
-function UserActivityReportSection({ params }: { params: ReportParams }) {
+function UserActivityReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
   const { data, isLoading } = useUserActivityReport(params)
   const exportMutation = useExportUserActivity()
 
@@ -1326,6 +1385,18 @@ function UserActivityReportSection({ params }: { params: ReportParams }) {
           )}
         </CardContent>
       </Card>
+
+      {data?.pagination && data.pagination.total > 0 && (
+        <PaginationControls
+          currentPage={page}
+          totalPages={data.pagination.last_page}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={setPerPage}
+          totalItems={data.pagination.total}
+          isPending={isLoading}
+        />
+      )}
     </div>
   )
 }
