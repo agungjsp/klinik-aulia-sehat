@@ -566,7 +566,7 @@ export interface ReportResponse<T> {
 }
 
 // ============================================
-// Realtime Types
+// Realtime Types (Laravel Reverb)
 // ============================================
 export interface QueueBroadcastResponse {
   status: "success" | "error"
@@ -577,7 +577,22 @@ export interface QueueBroadcastResponse {
   }
 }
 
-export interface QueueUpdatedEvent {
+export interface PolyQueueStatus {
+  queue_number_anamnesa: number | null
+  queue_number_with_doctor: number | null
+}
+
+/**
+ * WebSocket event payload from Laravel Reverb
+ * Contains queue status for all polies indexed by poly name (lowercase)
+ * Example: { "umum": { queue_number_anamnesa: 12, queue_number_with_doctor: 15 }, "gigi": {...} }
+ */
+export type QueueUpdatedEvent = Record<string, PolyQueueStatus>
+
+/**
+ * @deprecated Use QueueUpdatedEvent with poly name keys instead
+ */
+export interface LegacyQueueUpdatedEvent {
   queue_number_anamnesa: number | null
   queue_number_with_doctor: number | null
 }
