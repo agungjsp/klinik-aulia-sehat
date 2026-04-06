@@ -25,7 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger className="-ml-1" srLabel={t("nav:aria.toggleSidebar")} />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t("language:label")}</span>

@@ -31,6 +31,10 @@ const navEn = {
   brand: {
     subtitle: "Information System",
   },
+  aria: {
+    primary: "Primary navigation",
+    toggleSidebar: "Open or close sidebar",
+  },
 } as const
 
 export default navEn
