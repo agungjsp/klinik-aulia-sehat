@@ -96,7 +96,7 @@ function JadwalPage() {
   // Quota validation: required for Poli Gigi
   const isQuotaValid = useMemo(() => {
     if (!isSelectedDoctorPoliGigi) return true // Not required for non-Gigi
-    return watchedQuota !== null && watchedQuota !== undefined && watchedQuota > 0
+    return watchedQuota !== null && watchedQuota !== undefined && watchedQuota >= 0
   }, [isSelectedDoctorPoliGigi, watchedQuota])
 
   const schedules = scheduleData?.data || []
@@ -135,7 +135,7 @@ function JadwalPage() {
 
   const onSubmit = handleSubmit(async (data) => {
     // Additional validation for Poli Gigi
-    if (isSelectedDoctorPoliGigi && (data.quota === null || data.quota === undefined || data.quota <= 0)) {
+    if (isSelectedDoctorPoliGigi && (data.quota === null || data.quota === undefined || data.quota < 0)) {
       toast.error(t("schedule:toasts.quotaRequiredForDental"))
       return
     }
@@ -264,14 +264,14 @@ function JadwalPage() {
                             "truncate rounded px-1 text-xs flex items-center gap-1",
                             isDoctorPoliGigi 
                               ? "bg-pink-100 text-pink-800" 
-                              : s.quota 
+                              : s.quota !== null && s.quota !== undefined && s.quota > 0
                                 ? "bg-blue-100 text-blue-800" 
                                 : "bg-primary/20"
                           )}
-                          title={`${s.doctor?.name} (${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)})${s.quota ? ` - ${t("schedule:calendar.quota", { quota: s.quota })}` : ""}${isDoctorPoliGigi ? ` - ${t("schedule:calendar.dentalPoly")}` : ""}`}
+                          title={`${s.doctor?.name} (${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)})${s.quota !== null && s.quota !== undefined && s.quota > 0 ? ` - ${t("schedule:calendar.quota", { quota: s.quota })}` : ""}${isDoctorPoliGigi ? ` - ${t("schedule:calendar.dentalPoly")}` : ""}`}
                         >
                           <span className="truncate">{s.doctor?.name?.split(" ")[0]} {s.start_time.slice(0, 5)}</span>
-                          {s.quota && (
+                          {s.quota !== null && s.quota !== undefined && s.quota > 0 && (
                             <span className={cn(
                               "shrink-0 text-[10px] px-1 rounded",
                               isDoctorPoliGigi ? "bg-pink-200 text-pink-700" : "bg-blue-200 text-blue-700"
@@ -327,7 +327,7 @@ function JadwalPage() {
                             {t("schedule:calendar.dentalPoly")}
                           </Badge>
                         )}
-                        {s.quota !== null && s.quota !== undefined && (
+                        {s.quota !== null && s.quota !== undefined && s.quota > 0 && (
                           <Badge variant="secondary" className="gap-1">
                             <Users className="h-3 w-3" />
                             {t("schedule:calendar.quota", { quota: s.quota })}
@@ -418,10 +418,10 @@ function JadwalPage() {
                 name="quota"
                 control={control}
                 render={({ field }) => (
-                  <Input
-                    id="quota"
-                    type="number"
-                    min="1"
+                    <Input
+                      id="quota"
+                      type="number"
+                      min="0"
                     placeholder={
                       isSelectedDoctorPoliGigi
                         ? t("schedule:form.quotaRequiredPlaceholder")

@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { Clock, Users, CheckCircle2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getQuotaUsage } from "@/lib/quota"
 import { cn } from "@/lib/utils"
 import type { Schedule, Reservation } from "@/types"
 
@@ -33,26 +34,15 @@ export function SchedulePicker({
   // Compute usage for each schedule
   const scheduleInfoList = useMemo<ScheduleCardInfo[]>(() => {
     return schedules.map((schedule) => {
-      const quota = schedule.quota
       const used = reservations.filter((r) => r.schedule_id === schedule.id).length
+      const usage = getQuotaUsage({ quota: schedule.quota, used })
 
-      if (quota === null || quota === undefined) {
-        return {
-          schedule,
-          quota: null,
-          used,
-          remaining: Infinity,
-          isFull: false,
-        }
-      }
-
-      const remaining = Math.max(0, quota - used)
       return {
         schedule,
-        quota,
-        used,
-        remaining,
-        isFull: remaining === 0,
+        quota: usage.quota,
+        used: usage.used,
+        remaining: usage.remaining,
+        isFull: usage.isFull,
       }
     })
   }, [schedules, reservations])
@@ -147,7 +137,7 @@ interface ScheduleCardProps {
 
 function ScheduleCard({ info, isSelected, onSelect, disabled }: ScheduleCardProps) {
   const { schedule, quota, used, remaining, isFull } = info
-  const hasQuota = quota !== null
+  const hasQuota = quota !== null && quota > 0
 
   return (
     <button
@@ -228,10 +218,10 @@ export function SelectedScheduleSummary({ schedule, reservations, onClear }: Sel
   if (!schedule) return null
 
   const used = reservations.filter((r) => r.schedule_id === schedule.id).length
-  const quota = schedule.quota
-  const hasQuota = quota !== null && quota !== undefined
-  const remaining = hasQuota ? Math.max(0, quota - used) : null
-  const isFull = hasQuota && remaining === 0
+  const usage = getQuotaUsage({ quota: schedule.quota, used })
+  const hasQuota = !usage.isUnlimited
+  const remaining = hasQuota ? usage.remaining : null
+  const isFull = usage.isFull
 
   return (
     <div className={cn(
@@ -246,11 +236,11 @@ export function SelectedScheduleSummary({ schedule, reservations, onClear }: Sel
           <p className="font-medium text-sm">{schedule.doctor?.name}</p>
           <p className="text-xs text-muted-foreground">
             {schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}
-            {hasQuota && (
-              <span className={cn("ml-2", isFull ? "text-destructive" : "text-green-600")}>
-                • Sisa: {remaining}/{quota}
-              </span>
-            )}
+              {hasQuota && usage.quota !== null && (
+                <span className={cn("ml-2", isFull ? "text-destructive" : "text-green-600")}>
+                  • Sisa: {remaining}/{usage.quota}
+                </span>
+              )}
           </p>
         </div>
       </div>

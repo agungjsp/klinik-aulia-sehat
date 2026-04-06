@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { getQuotaUsage } from "@/lib/quota"
 import type { Reservation, Status, Schedule, QueueStatusName } from "@/types"
 
 interface UseAntreanSummaryParams {
@@ -66,17 +67,23 @@ export function useAntreanSummary({
     const schedule = schedules.find((s) => s.id === selectedScheduleId)
     if (!schedule) return null
 
-    const quota = schedule.quota
-    if (quota === null || quota === undefined) return null
-
     const reservationsForSchedule = filteredReservations.filter(
       (r) => r.schedule_id === selectedScheduleId
     ).length
 
-    const remaining = Math.max(0, quota - reservationsForSchedule)
-    const isFull = remaining === 0
+    const usage = getQuotaUsage({
+      quota: schedule.quota,
+      used: reservationsForSchedule,
+    })
 
-    return { quota, used: reservationsForSchedule, remaining, isFull }
+    if (usage.isUnlimited) return null
+
+    return {
+      quota: usage.quota,
+      used: usage.used,
+      remaining: usage.remaining,
+      isFull: usage.isFull,
+    }
   }, [selectedScheduleId, schedules, filteredReservations])
 
   // Get schedules for selected poly and date
