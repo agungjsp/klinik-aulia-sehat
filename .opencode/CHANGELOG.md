@@ -319,3 +319,43 @@
   - quota input `min` changed from `1` to `0`.
   - finite quota display checks now use explicit `quota > 0` semantics.
 - Verification run: `bun run lint` and `bun run build` both passed.
+
+## 2026-04-06 - Sidebar quality fixes (a11y/responsive/perf)
+
+- Improved sidebar navigation semantics in `src/components/layout/sidebar.tsx`:
+  - added `role="navigation"` and localized `aria-label` (`nav:aria.primary`) to sidebar root.
+  - added `aria-current="page"` for active route links.
+- Improved mobile and keyboard accessibility in `src/components/ui/sidebar.tsx`:
+  - `SidebarTrigger` now supports localized `srLabel` prop and uses larger touch target on mobile (`h-11 w-11`, desktop unchanged via `md:h-8 md:w-8`).
+  - `SidebarRail` is keyboard-focusable (removed `tabIndex={-1}`), widened hit area (`w-6`), and gained visible focus ring styles.
+- Reduced expensive layout-transition cost in `src/components/ui/sidebar.tsx`:
+  - removed `transition-[width]` wrapper transition.
+  - changed menu button transition from `transition-[width,height,padding]` to `transition-colors`.
+- Updated menu button sizing for better tap ergonomics in `src/components/ui/sidebar.tsx`:
+  - `default`: `h-11` on mobile, `md:h-8` on desktop.
+  - `sm`: `h-10` on mobile, `md:h-7` on desktop.
+- Added localized aria strings for sidebar controls:
+  - `src/lib/i18n/resources/id/nav.ts`
+  - `src/lib/i18n/resources/en/nav.ts`
+- Wired localized sidebar trigger label in app shell:
+  - `src/components/layout/app-layout.tsx` now passes `srLabel={t("nav:aria.toggleSidebar")}`.
+
+### Verification update
+- Lint passes: `bun run lint`.
+- Build/type-check passes: `bun run build`.
+- Build still reports existing large-chunk warning (`~811 kB`) for main bundle.
+
+## 2026-04-06 - Build performance optimization (bundle chunking)
+
+- Added Rollup `manualChunks` strategy in `vite.config.ts` to split large vendor payloads by domain:
+  - `vendor-react`, `vendor-tanstack`, `vendor-radix`, `vendor-charts`, `vendor-realtime`, `vendor-http`, `vendor-icons`, `vendor-date`, `vendor-i18n`, `vendor-validation`, `vendor-theme`, `vendor-baseui`, `vendor-daypicker`, fallback `vendor-misc`.
+- Tightened React chunk match logic to avoid over-broad matching and improve split quality.
+- Result: removed >500k JS chunk warning from build by distributing previous monolithic vendor chunk.
+
+### Verification update
+- Lint passes: `bun run lint`.
+- Build/type-check passes: `bun run build`.
+- Largest JS chunks now:
+  - `vendor-misc` ~265.61 kB
+  - `vendor-charts` ~221.75 kB
+  - `vendor-react` ~196.13 kB

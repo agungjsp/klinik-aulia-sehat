@@ -31,6 +31,10 @@ const navId = {
   brand: {
     subtitle: "Sistem Informasi",
   },
+  aria: {
+    primary: "Navigasi utama",
+    toggleSidebar: "Buka atau tutup sidebar",
+  },
 } as const
 
 export default navId

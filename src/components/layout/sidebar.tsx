@@ -164,7 +164,7 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" role="navigation" aria-label={t("nav:aria.primary")}>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -197,7 +197,7 @@ export function AppSidebar() {
                     return (
                       <SidebarMenuItem key={item.to}>
                         <SidebarMenuButton asChild tooltip={t(item.labelKey)} isActive={isActive}>
-                          <Link to={item.to}>
+                          <Link to={item.to} aria-current={isActive ? "page" : undefined}>
                             <item.icon />
                             <span>{t(item.labelKey)}</span>
                           </Link>
