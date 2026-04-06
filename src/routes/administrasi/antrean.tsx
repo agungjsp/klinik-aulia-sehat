@@ -36,6 +36,7 @@ import { useAuthStore } from "@/stores/auth"
 import { cn, sortPoliesWithUmumFirst, getDefaultPolyId } from "@/lib/utils"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 import { getApiErrorMessage } from "@/lib/api-error"
+import { getQuotaUsage } from "@/lib/quota"
 import { DataTableToolbar } from "@/components/data-table"
 import type { Poly, Reservation, QueueStatusName, Schedule, Patient } from "@/types"
 
@@ -197,18 +198,24 @@ function AdministrasiAntreanPage() {
   const quotaInfo = useMemo(() => {
     if (!selectedSchedule) return null
 
-    const quota = selectedSchedule.quota
-    if (quota === null || quota === undefined) return null
-
     const scheduleId = formScheduleId || selectedScheduleId
     const reservationsForSchedule = reservations.filter(
       (r: Reservation) => r.schedule_id === scheduleId
     ).length
 
-    const remaining = Math.max(0, quota - reservationsForSchedule)
-    const isFull = remaining === 0
+    const usage = getQuotaUsage({
+      quota: selectedSchedule.quota,
+      used: reservationsForSchedule,
+    })
 
-    return { quota, used: reservationsForSchedule, remaining, isFull }
+    if (usage.isUnlimited) return null
+
+    return {
+      quota: usage.quota,
+      used: usage.used,
+      remaining: usage.remaining,
+      isFull: usage.isFull,
+    }
   }, [selectedSchedule, reservations, formScheduleId, selectedScheduleId])
 
   // Get status name from id

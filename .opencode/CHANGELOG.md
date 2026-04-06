@@ -308,3 +308,14 @@
 ### Verification update 11
 - Lint passes: `bun run lint`.
 - Build/type-check passes: `bun run build`.
+
+## 2026-04-06 - Quota unlimited semantics (null or 0)
+
+- Added shared quota utility at `src/lib/quota.ts` with centralized `isUnlimitedQuota` and `getQuotaUsage` helpers.
+- Updated admin queue summary logic to treat `quota = 0` as unlimited in `src/hooks/use-antrean-summary.ts` and `src/routes/administrasi/antrean.tsx`.
+- Updated schedule selection and selected schedule summary behavior in `src/components/schedule/schedule-picker.tsx` so `quota = 0` is not marked full and shows unlimited state.
+- Updated schedule management validations and rendering in `src/routes/jadwal/index.tsx`:
+  - Poli Gigi now allows `quota = 0`.
+  - quota input `min` changed from `1` to `0`.
+  - finite quota display checks now use explicit `quota > 0` semantics.
+- Verification run: `bun run lint` and `bun run build` both passed.
