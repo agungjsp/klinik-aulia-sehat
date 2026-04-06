@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Play, CheckCircle, CalendarPlus } from "lucide-react"
@@ -43,12 +44,10 @@ const antreanSearchSchema = z.object({
 })
 
 // Schema for follow-up schedule form
-const followUpSchema = z.object({
-  date: z.string().min(1, "Tanggal wajib diisi"),
-  description: z.string().optional(),
-})
-
-type FollowUpForm = z.infer<typeof followUpSchema>
+type FollowUpForm = {
+  date: string
+  description?: string
+}
 
 export const Route = createFileRoute("/dokter/antrean")({
   component: DokterAntreanPage,
@@ -56,6 +55,7 @@ export const Route = createFileRoute("/dokter/antrean")({
 })
 
 function DokterAntreanPage() {
+  const { t } = useTranslation(["doctorQueue", "queue", "common"])
   const navigate = useNavigate({ from: "/dokter/antrean" })
   const search = Route.useSearch() ?? {}
   const { user } = useAuthStore()
@@ -85,6 +85,9 @@ function DokterAntreanPage() {
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false)
   const [completedReservation, setCompletedReservation] = useState<Reservation | null>(null)
   const [showFollowUpForm, setShowFollowUpForm] = useState(false)
+  const [followUpConfirmOpen, setFollowUpConfirmOpen] = useState(false)
+  const [followUpDecision, setFollowUpDecision] = useState<"skip" | "create" | null>(null)
+  const [followUpPayload, setFollowUpPayload] = useState<FollowUpForm | null>(null)
 
   const {
     register: registerFollowUp,
@@ -92,7 +95,12 @@ function DokterAntreanPage() {
     reset: resetFollowUp,
     formState: { errors: followUpErrors },
   } = useForm<FollowUpForm>({
-    resolver: zodResolver(followUpSchema),
+    resolver: zodResolver(
+      z.object({
+        date: z.string().min(1, t("doctorQueue:validation.dateRequired")),
+        description: z.string().optional(),
+      }),
+    ),
   })
 
   // Set default poly if not set and we have polies
@@ -166,7 +174,7 @@ function DokterAntreanPage() {
     if (!pendingAction) return
     const reservationId = pendingAction.reservation.id
     if (!reservationId) {
-      toast.error("Data reservasi tidak tersedia.")
+      toast.error(t("doctorQueue:toasts.reservationDataUnavailable"))
       return
     }
 
@@ -174,15 +182,15 @@ function DokterAntreanPage() {
       if (pendingAction.action === "withdoctor") {
         const result = await toWithDoctorMutation.mutateAsync(reservationId)
         if (result.autoNoShow) {
-          toast.warning("Pasien tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW")
+          toast.warning(t("doctorQueue:toasts.autoNoShow"))
         } else {
-          toast.success("Pasien dipanggil untuk konsultasi")
+          toast.success(t("doctorQueue:toasts.calledToConsultation"))
         }
         setConfirmOpen(false)
         setPendingAction(null)
       } else {
         await toDoneMutation.mutateAsync(reservationId)
-        toast.success("Konsultasi selesai")
+        toast.success(t("doctorQueue:toasts.consultationDone"))
         setConfirmOpen(false)
         // Show follow-up dialog after consultation is done
         setCompletedReservation(pendingAction.reservation)
@@ -201,19 +209,38 @@ function DokterAntreanPage() {
     setFollowUpDialogOpen(false)
     setCompletedReservation(null)
     setShowFollowUpForm(false)
+    setFollowUpConfirmOpen(false)
+    setFollowUpDecision(null)
+    setFollowUpPayload(null)
     resetFollowUp()
   }
 
-  // Handle showing the follow-up form
-  const handleShowFollowUpForm = () => {
-    setShowFollowUpForm(true)
-    resetFollowUp({ date: "", description: "" })
+  const requestFollowUpDecision = (decision: "skip" | "create") => {
+    if (decision === "create") {
+      setShowFollowUpForm(true)
+      resetFollowUp({ date: "", description: "" })
+    }
+    setFollowUpDecision(decision)
+    setFollowUpConfirmOpen(true)
   }
 
   // Handle submitting follow-up schedule
-  const onFollowUpSubmit = handleFollowUpSubmit(async (data) => {
+  const requestFollowUpSubmit = handleFollowUpSubmit(async (data) => {
+    setFollowUpPayload(data)
+    setFollowUpDecision("create")
+    setFollowUpConfirmOpen(true)
+  })
+
+  const confirmFollowUpAction = async () => {
+    if (followUpDecision === "skip") {
+      handleCloseFollowUpDialog()
+      return
+    }
+
+    if (!followUpPayload) return
+
     if (!completedReservation?.patient_id || !completedReservation?.poly_id) {
-      toast.error("Data pasien tidak tersedia")
+      toast.error(t("doctorQueue:toasts.patientDataUnavailable"))
       return
     }
 
@@ -221,15 +248,15 @@ function DokterAntreanPage() {
       await checkupScheduleCreateMutation.mutateAsync({
         patient_id: completedReservation.patient_id,
         poly_id: completedReservation.poly_id,
-        date: data.date,
-        description: data.description || "",
+        date: followUpPayload.date,
+        description: followUpPayload.description || "",
       })
-      toast.success("Jadwal kontrol berhasil ditambahkan")
+      toast.success(t("doctorQueue:toasts.followUpAdded"))
       handleCloseFollowUpDialog()
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
     }
-  })
+  }
 
   // Helper to format queue number
   const formatQueueNumber = (num: number | string) => String(num).padStart(3, "0")
@@ -240,7 +267,7 @@ function DokterAntreanPage() {
     <div className="space-y-6">
       {/* Shared Header */}
       <AntreanHeader
-        title="Antrean Pasien"
+        title={t("doctorQueue:header.title")}
         date={selectedDate}
         selectedPolyId={selectedPolyId}
         reservations={allReservations}
@@ -253,14 +280,14 @@ function DokterAntreanPage() {
         {/* Sedang Konsultasi */}
         <div className="rounded-lg border">
           <div className="border-b bg-yellow-50 p-4">
-            <h2 className="font-semibold text-yellow-700">Sedang Konsultasi</h2>
-            <p className="text-sm text-yellow-600">{inConsultation.length} pasien</p>
+            <h2 className="font-semibold text-yellow-700">{t("doctorQueue:sections.inConsultation")}</h2>
+            <p className="text-sm text-yellow-600">{t("doctorQueue:sections.patientCount", { count: inConsultation.length })}</p>
           </div>
           <div className="p-4 space-y-3">
             {isLoading ? (
               <Skeleton className="h-20 w-full" />
             ) : inConsultation.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Tidak ada pasien</p>
+              <p className="text-center text-muted-foreground py-4">{t("doctorQueue:sections.noPatient")}</p>
             ) : (
               inConsultation.map((reservation) => (
                 <div key={reservation.id} className="rounded-lg border bg-yellow-50 p-4">
@@ -273,7 +300,7 @@ function DokterAntreanPage() {
                       </p>
                       <p className="font-medium">{reservation.patient?.patient_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                        {reservation.poly?.name} • {reservation.bpjs ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}
                       </p>
                     </div>
                     <Button
@@ -282,14 +309,16 @@ function DokterAntreanPage() {
                         handleAction(
                           reservation,
                           "done",
-                          "Selesai Konsultasi",
-                          `Selesaikan konsultasi untuk pasien ${reservation.patient?.patient_name}?`
+                          t("doctorQueue:confirmations.completeTitle"),
+                          t("doctorQueue:confirmations.completeDescription", {
+                            name: reservation.patient?.patient_name || "-",
+                          })
                         )
                       }
                       disabled={isPending}
                     >
                       <CheckCircle className="mr-1 h-4 w-4" />
-                      Selesai
+                      {t("doctorQueue:actions.complete")}
                     </Button>
                   </div>
                 </div>
@@ -301,14 +330,14 @@ function DokterAntreanPage() {
         {/* Menunggu Konsultasi */}
         <div className="rounded-lg border">
           <div className="border-b bg-purple-50 p-4">
-            <h2 className="font-semibold text-purple-700">Menunggu Konsultasi</h2>
-            <p className="text-sm text-purple-600">{waitingDoctor.length} pasien</p>
+            <h2 className="font-semibold text-purple-700">{t("doctorQueue:sections.waitingConsultation")}</h2>
+            <p className="text-sm text-purple-600">{t("doctorQueue:sections.patientCount", { count: waitingDoctor.length })}</p>
           </div>
           <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
             ) : waitingDoctor.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Tidak ada pasien menunggu</p>
+              <p className="text-center text-muted-foreground py-4">{t("doctorQueue:sections.noWaitingPatient")}</p>
             ) : (
               waitingDoctor.map((reservation, idx) => (
                 <div
@@ -326,7 +355,9 @@ function DokterAntreanPage() {
                     <div>
                       <p className="font-medium">{reservation.patient?.patient_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Selesai anamnesa: {reservation.queue?.call_time?.slice(0, 5) || "-"}
+                        {t("doctorQueue:sections.finishedAnamnesisAt", {
+                          time: reservation.queue?.call_time?.slice(0, 5) || "-",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -337,20 +368,22 @@ function DokterAntreanPage() {
                         handleAction(
                           reservation,
                           "withdoctor",
-                          "Panggil Pasien",
-                          `Panggil pasien ${reservation.patient?.patient_name} ke ruang konsultasi?`
+                          t("doctorQueue:confirmations.callTitle"),
+                          t("doctorQueue:confirmations.callDescription", {
+                            name: reservation.patient?.patient_name || "-",
+                          })
                         )
                       }
                       disabled={isPending}
                     >
                       <Play className="mr-1 h-4 w-4" />
-                      Panggil
+                      {t("doctorQueue:actions.call")}
                     </Button>
                   )}
                   {idx === 0 && inConsultation.length > 0 && (
-                    <Badge variant="secondary">Tunggu pasien selesai</Badge>
+                    <Badge variant="secondary">{t("doctorQueue:sections.waitUntilDone")}</Badge>
                   )}
-                  {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
+                  {idx > 0 && <Badge variant="outline">{t("doctorQueue:sections.queueOrder", { order: idx + 1 })}</Badge>}
                 </div>
               ))
             )}
@@ -363,6 +396,13 @@ function DokterAntreanPage() {
         onOpenChange={setConfirmOpen}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
+        entityName={pendingAction?.reservation.patient?.patient_name}
+        impactItems={[
+          t("doctorQueue:confirmations.realtimeImpact"),
+          pendingAction?.action === "done"
+            ? t("doctorQueue:confirmations.doneImpact")
+            : t("doctorQueue:confirmations.callImpact"),
+        ]}
         onConfirm={confirmAction}
       />
 
@@ -372,27 +412,29 @@ function DokterAntreanPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CalendarPlus className="h-5 w-5" />
-              Jadwal Kontrol
+              {t("doctorQueue:followUp.title")}
             </DialogTitle>
             <DialogDescription>
-              Apakah pasien <span className="font-semibold">{completedReservation?.patient?.patient_name}</span> perlu dijadwalkan untuk kontrol berikutnya?
+              {t("doctorQueue:followUp.description", {
+                name: completedReservation?.patient?.patient_name || "-",
+              })}
             </DialogDescription>
           </DialogHeader>
 
           {!showFollowUpForm ? (
-            <DialogFooter className="flex gap-2 sm:justify-center">
-              <Button variant="outline" onClick={handleCloseFollowUpDialog}>
-                Tidak Perlu
+              <DialogFooter className="flex gap-2 sm:justify-center">
+              <Button variant="outline" onClick={() => requestFollowUpDecision("skip")}>
+                {t("doctorQueue:followUp.noNeed")}
               </Button>
-              <Button onClick={handleShowFollowUpForm}>
+              <Button onClick={() => requestFollowUpDecision("create")}>
                 <CalendarPlus className="mr-2 h-4 w-4" />
-                Ya, Jadwalkan
+                {t("doctorQueue:followUp.scheduleNow")}
               </Button>
             </DialogFooter>
           ) : (
-            <form onSubmit={onFollowUpSubmit} className="space-y-4">
+            <form onSubmit={requestFollowUpSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Nama Pasien</Label>
+                <Label>{t("doctorQueue:followUp.patientName")}</Label>
                 <Input 
                   value={completedReservation?.patient?.patient_name || ""} 
                   disabled 
@@ -401,7 +443,7 @@ function DokterAntreanPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Poli</Label>
+                <Label>{t("doctorQueue:followUp.poly")}</Label>
                 <Input 
                   value={completedReservation?.poly?.name || ""} 
                   disabled 
@@ -410,40 +452,74 @@ function DokterAntreanPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="follow-up-date">Tanggal Kontrol</Label>
+                <Label htmlFor="follow-up-date">{t("doctorQueue:followUp.date")}</Label>
                 <Input 
                   id="follow-up-date"
                   type="date" 
                   min={format(new Date(), "yyyy-MM-dd")}
                   {...registerFollowUp("date")} 
                 />
+                <p className="text-xs text-muted-foreground">{t("doctorQueue:followUp.dateHint")}</p>
                 {followUpErrors.date && (
                   <p className="text-sm text-destructive">{followUpErrors.date.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="follow-up-description">Keterangan (opsional)</Label>
+                <Label htmlFor="follow-up-description">{t("doctorQueue:followUp.noteOptional")}</Label>
                 <Textarea 
                   id="follow-up-description"
-                  placeholder="Contoh: Kontrol tekanan darah, cek hasil lab, dll."
+                  placeholder={t("doctorQueue:followUp.notePlaceholder")}
                   {...registerFollowUp("description")} 
                 />
               </div>
 
               <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowFollowUpForm(false)}>
-                  Kembali
+                  {t("doctorQueue:followUp.back")}
                 </Button>
                 <Button type="submit" disabled={checkupScheduleCreateMutation.isPending}>
                   {checkupScheduleCreateMutation.isPending && <LoadingSpinner size="sm" className="mr-2" />}
-                  Simpan Jadwal
+                  {t("doctorQueue:followUp.saveSchedule")}
                 </Button>
               </DialogFooter>
             </form>
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={followUpConfirmOpen}
+        onOpenChange={setFollowUpConfirmOpen}
+        title={
+          followUpDecision === "skip"
+            ? t("doctorQueue:followUp.skipTitle")
+            : t("doctorQueue:followUp.confirmTitle")
+        }
+        description={
+          followUpDecision === "skip"
+            ? t("doctorQueue:followUp.skipDescription", {
+                name: completedReservation?.patient?.patient_name || "-",
+              })
+            : t("doctorQueue:followUp.confirmDescription", {
+                name: completedReservation?.patient?.patient_name || "-",
+              })
+        }
+        entityName={completedReservation?.patient?.patient_name}
+        impactItems={
+          followUpDecision === "skip"
+            ? [
+                t("doctorQueue:followUp.skipImpact1"),
+                t("doctorQueue:followUp.skipImpact2"),
+              ]
+            : [
+                t("doctorQueue:followUp.createImpact1"),
+                t("doctorQueue:followUp.createImpact2"),
+              ]
+        }
+        onConfirm={confirmFollowUpAction}
+        confirmText={followUpDecision === "skip" ? t("doctorQueue:followUp.skipConfirm") : t("doctorQueue:followUp.saveSchedule")}
+      />
     </div>
   )
 }

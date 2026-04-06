@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Play, AlertTriangle } from "lucide-react"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   useReservationList,
   useReservationToWithDoctor,
@@ -15,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AntreanHeader } from "@/components/antrean"
 import { useAuthStore } from "@/stores/auth"
 import { getApiErrorMessage } from "@/lib/api-error"
@@ -32,6 +34,7 @@ export const Route = createFileRoute("/perawat-asisten/antrean")({
 })
 
 function PerawatAsistenAntreanPage() {
+  const { t } = useTranslation(["nurseQueue", "queue", "common"])
   const navigate = useNavigate({ from: "/perawat-asisten/antrean" })
   const search = Route.useSearch() ?? {}
   const { user } = useAuthStore()
@@ -55,6 +58,13 @@ function PerawatAsistenAntreanPage() {
 
   const toWithDoctorMutation = useReservationToWithDoctor()
   const toNoShowMutation = useReservationToNoShow()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{
+    reservation: Reservation
+    action: "call" | "noshow"
+    title: string
+    description: string
+  } | null>(null)
 
   // Set default poly if not set and we have polies
   const polies = useMemo(
@@ -123,20 +133,33 @@ function PerawatAsistenAntreanPage() {
   const handleCallPatient = async (reservation: Reservation) => {
     const reservationId = reservation.id
     if (!reservationId) {
-      toast.error("Data reservasi tidak tersedia.")
+      toast.error(t("nurseQueue:nurseAssistant.toasts.reservationDataUnavailable"))
       return
     }
     try {
       const currentCallCount = getCallCount(reservation)
       const result = await toWithDoctorMutation.mutateAsync(reservationId)
       if (result.autoNoShow) {
-        toast.warning(`Pasien ${reservation.patient?.patient_name} tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW`)
+        toast.warning(
+          t("nurseQueue:nurseAssistant.toasts.autoNoShow", {
+            name: reservation.patient?.patient_name || "-",
+          }),
+        )
       } else {
         const newCallCount = currentCallCount + 1
         if (newCallCount === 1) {
-          toast.success(`Memanggil pasien ${reservation.patient?.patient_name}`)
+          toast.success(
+            t("nurseQueue:nurseAssistant.toasts.calledPatient", {
+              name: reservation.patient?.patient_name || "-",
+            }),
+          )
         } else {
-          toast.info(`Panggilan ke-${newCallCount} untuk ${reservation.patient?.patient_name}`)
+          toast.info(
+            t("nurseQueue:nurseAssistant.toasts.recallCount", {
+              count: newCallCount,
+              name: reservation.patient?.patient_name || "-",
+            }),
+          )
         }
       }
     } catch (error: unknown) {
@@ -147,15 +170,36 @@ function PerawatAsistenAntreanPage() {
   const handleMarkNoShow = async (reservation: Reservation) => {
     const reservationId = reservation.id
     if (!reservationId) {
-      toast.error("Data reservasi tidak tersedia.")
+      toast.error(t("nurseQueue:nurseAssistant.toasts.reservationDataUnavailable"))
       return
     }
     try {
       await toNoShowMutation.mutateAsync(reservationId)
-      toast.warning("Pasien ditandai tidak hadir")
+      toast.warning(t("nurseQueue:nurseAssistant.toasts.markedNoShow"))
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
     }
+  }
+
+  const requestAction = (
+    reservation: Reservation,
+    action: "call" | "noshow",
+    title: string,
+    description: string,
+  ) => {
+    setPendingAction({ reservation, action, title, description })
+    setConfirmOpen(true)
+  }
+
+  const confirmAction = async () => {
+    if (!pendingAction) return
+    if (pendingAction.action === "call") {
+      await handleCallPatient(pendingAction.reservation)
+    } else {
+      await handleMarkNoShow(pendingAction.reservation)
+    }
+    setConfirmOpen(false)
+    setPendingAction(null)
   }
 
   // Helper to format queue number
@@ -170,7 +214,7 @@ function PerawatAsistenAntreanPage() {
     <div className="space-y-6">
       {/* Shared Header */}
       <AntreanHeader
-        title="Panggil Pasien ke Dokter"
+        title={t("nurseQueue:nurseAssistant.headerTitle")}
         date={selectedDate}
         selectedPolyId={selectedPolyId}
         reservations={allReservations}
@@ -183,14 +227,14 @@ function PerawatAsistenAntreanPage() {
         {/* Sedang dengan Dokter */}
         <div className="rounded-lg border">
           <div className="border-b bg-green-50 p-4">
-            <h2 className="font-semibold text-green-700">Sedang dengan Dokter</h2>
-            <p className="text-sm text-green-600">{withDoctor.length} pasien</p>
+            <h2 className="font-semibold text-green-700">{t("nurseQueue:nurseAssistant.sections.withDoctor")}</h2>
+            <p className="text-sm text-green-600">{t("nurseQueue:nurseAssistant.sections.patientCount", { count: withDoctor.length })}</p>
           </div>
           <div className="p-4 space-y-3">
             {isLoading ? (
               <Skeleton className="h-20 w-full" />
             ) : withDoctor.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Tidak ada pasien</p>
+              <p className="text-center text-muted-foreground py-4">{t("nurseQueue:nurseAssistant.sections.noPatient")}</p>
             ) : (
               withDoctor.map((reservation, idx) => {
                 const callCount = getCallCount(reservation)
@@ -205,11 +249,11 @@ function PerawatAsistenAntreanPage() {
                         </p>
                         <p className="font-medium">{reservation.patient?.patient_name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                          {reservation.poly?.name} • {reservation.bpjs ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}
                         </p>
                         {callCount > 0 && (
                           <p className="text-xs text-orange-600 mt-1">
-                            Panggilan: {callCount}/3
+                            {t("nurseQueue:nurseAssistant.actions.callCount", { count: callCount })}
                           </p>
                         )}
                       </div>
@@ -218,24 +262,42 @@ function PerawatAsistenAntreanPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleMarkNoShow(reservation)}
+                            onClick={() =>
+                              requestAction(
+                                reservation,
+                                "noshow",
+                                t("nurseQueue:nurseAssistant.confirmations.markNoShowTitle"),
+                                t("nurseQueue:nurseAssistant.confirmations.markNoShowDescription", {
+                                  name: reservation.patient?.patient_name || "-",
+                                }),
+                              )
+                            }
                             disabled={isPending}
                           >
                             <AlertTriangle className="mr-1 h-4 w-4" />
-                            No Show
+                            {t("nurseQueue:nurseAssistant.actions.noShow")}
                           </Button>
                         ) : isFirst ? (
                           <Button
                             size="sm"
-                            onClick={() => handleCallPatient(reservation)}
+                            onClick={() =>
+                              requestAction(
+                                reservation,
+                                "call",
+                                t("nurseQueue:nurseAssistant.confirmations.recallTitle"),
+                                t("nurseQueue:nurseAssistant.confirmations.recallDescription", {
+                                  name: reservation.patient?.patient_name || "-",
+                                }),
+                              )
+                            }
                             disabled={isPending}
                           >
                             <Play className="mr-1 h-4 w-4" />
-                            Panggil Ulang
+                            {t("nurseQueue:nurseAssistant.actions.recall")}
                           </Button>
                         ) : null}
                         <Badge variant="default" className="bg-green-600">
-                          Dengan Dokter
+                          {t("nurseQueue:nurseAssistant.actions.withDoctor")}
                         </Badge>
                       </div>
                     </div>
@@ -249,14 +311,14 @@ function PerawatAsistenAntreanPage() {
         {/* Menunggu Dokter */}
         <div className="rounded-lg border">
           <div className="border-b bg-purple-50 p-4">
-            <h2 className="font-semibold text-purple-700">Menunggu Dipanggil Dokter</h2>
-            <p className="text-sm text-purple-600">{waitingDoctor.length} pasien</p>
+            <h2 className="font-semibold text-purple-700">{t("nurseQueue:nurseAssistant.sections.waitingForDoctorCall")}</h2>
+            <p className="text-sm text-purple-600">{t("nurseQueue:nurseAssistant.sections.patientCount", { count: waitingDoctor.length })}</p>
           </div>
           <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
             ) : waitingDoctor.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Tidak ada pasien menunggu</p>
+              <p className="text-center text-muted-foreground py-4">{t("nurseQueue:nurseAssistant.sections.noWaitingPatient")}</p>
             ) : (
               waitingDoctor.map((reservation, idx) => {
                 const callCount = getCallCount(reservation)
@@ -277,30 +339,39 @@ function PerawatAsistenAntreanPage() {
                         <div>
                           <p className="font-medium">{reservation.patient?.patient_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                            {reservation.poly?.name} • {reservation.bpjs ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {callCount > 0 && (
                           <Badge variant="outline" className="text-orange-600">
-                            Panggilan: {callCount}/3
+                            {t("nurseQueue:nurseAssistant.actions.callCount", { count: callCount })}
                           </Badge>
                         )}
                         {isFirst && callCount < 3 && withDoctor.length === 0 && (
                           <Button
                             size="sm"
-                            onClick={() => handleCallPatient(reservation)}
+                            onClick={() =>
+                              requestAction(
+                                reservation,
+                                "call",
+                                t("nurseQueue:nurseAssistant.confirmations.callTitle"),
+                                t("nurseQueue:nurseAssistant.confirmations.callDescription", {
+                                  name: reservation.patient?.patient_name || "-",
+                                }),
+                              )
+                            }
                             disabled={isPending}
                           >
                             <Play className="mr-1 h-4 w-4" />
-                            Panggil
+                            {t("nurseQueue:nurseAssistant.actions.call")}
                           </Button>
                         )}
                         {isFirst && withDoctor.length > 0 && (
-                          <Badge variant="secondary">Tunggu pasien selesai</Badge>
+                          <Badge variant="secondary">{t("nurseQueue:nurseAssistant.actions.waitUntilDone")}</Badge>
                         )}
-                        {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
+                        {idx > 0 && <Badge variant="outline">{t("nurseQueue:nurseAssistant.actions.queueOrder", { order: idx + 1 })}</Badge>}
                       </div>
                     </div>
                   </div>
@@ -310,6 +381,33 @@ function PerawatAsistenAntreanPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={pendingAction?.title || ""}
+        description={pendingAction?.description || ""}
+        entityName={pendingAction?.reservation.patient?.patient_name}
+        impactItems={
+          pendingAction?.action === "noshow"
+            ? [
+                t("nurseQueue:nurseAssistant.confirmations.noShowImpact1"),
+                t("nurseQueue:nurseAssistant.confirmations.noShowImpact2"),
+              ]
+            : [
+                t("nurseQueue:nurseAssistant.confirmations.callImpact1"),
+                t("nurseQueue:nurseAssistant.confirmations.callImpact2"),
+              ]
+        }
+        recoveryHint={
+          pendingAction?.action === "noshow"
+            ? t("nurseQueue:nurseAssistant.confirmations.noShowRecoveryHint")
+            : t("nurseQueue:nurseAssistant.confirmations.callRecoveryHint")
+        }
+        variant={pendingAction?.action === "noshow" ? "destructive" : "default"}
+        onConfirm={confirmAction}
+        confirmText={pendingAction?.action === "noshow" ? t("nurseQueue:nurseAssistant.actions.markNoShow") : t("nurseQueue:nurseAssistant.actions.continue")}
+      />
     </div>
   )
 }

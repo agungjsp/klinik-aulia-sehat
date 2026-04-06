@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import {
@@ -11,6 +12,7 @@ import {
   useConfigUpdate,
   useConfigDelete,
 } from "@/hooks"
+import { DataTable, DataTableActions } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,34 +22,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Config } from "@/types"
+import type { Config, DataTableColumn } from "@/types"
 
 export const Route = createFileRoute("/pengaturan/konfigurasi-sistem")({
   component: ConfigPage,
 })
 
-const configSchema = z.object({
-  name: z.string().min(1, "Nama konfigurasi wajib diisi"),
-  value: z.string().min(1, "Nilai konfigurasi wajib diisi"),
-})
-
-type ConfigForm = z.infer<typeof configSchema>
+type ConfigForm = {
+  name: string
+  value: string
+}
 
 function ConfigPage() {
+  const { t } = useTranslation(["common", "settings"])
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingConfig, setEditingConfig] = useState<Config | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [submitPayload, setSubmitPayload] = useState<ConfigForm | null>(null)
 
   const { data: configsData, isLoading } = useConfigList()
 
@@ -61,7 +54,12 @@ function ConfigPage() {
     reset,
     formState: { errors },
   } = useForm<ConfigForm>({
-    resolver: zodResolver(configSchema),
+    resolver: zodResolver(
+      z.object({
+        name: z.string().min(1, t("settings:systemConfig.validation.nameRequired")),
+        value: z.string().min(1, t("settings:systemConfig.validation.valueRequired")),
+      }),
+    ),
     defaultValues: {
       name: "",
       value: "",
@@ -86,19 +84,25 @@ function ConfigPage() {
     setIsFormOpen(true)
   }
 
-  const onSubmit = async (formData: ConfigForm) => {
+  const requestSubmit = (formData: ConfigForm) => {
+    setSubmitPayload(formData)
+  }
+
+  const confirmSubmit = async () => {
+    if (!submitPayload) return
     try {
       if (editingConfig) {
         await updateMutation.mutateAsync({
           id: editingConfig.id,
-          data: formData,
+          data: submitPayload,
         })
-        toast.success("Konfigurasi sistem berhasil diperbarui")
+        toast.success(t("settings:systemConfig.toasts.updated"))
       } else {
-        await createMutation.mutateAsync(formData)
-        toast.success("Konfigurasi sistem berhasil ditambahkan")
+        await createMutation.mutateAsync(submitPayload)
+        toast.success(t("settings:systemConfig.toasts.added"))
       }
       setIsFormOpen(false)
+      setSubmitPayload(null)
       reset()
     } catch (error) {
       toast.error(getApiErrorMessage(error))
@@ -109,7 +113,7 @@ function ConfigPage() {
     if (!deleteId) return
     try {
       await deleteMutation.mutateAsync(deleteId)
-      toast.success("Konfigurasi sistem berhasil dihapus")
+      toast.success(t("settings:systemConfig.toasts.deleted"))
       setDeleteId(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error))
@@ -117,83 +121,82 @@ function ConfigPage() {
   }
 
   const configs = configsData?.data || []
+  const columns: DataTableColumn<Config>[] = [
+    {
+      id: "name",
+      header: t("settings:systemConfig.table.name"),
+      cell: (config) => <span className="font-medium">{config.name}</span>,
+      widthClassName: "min-w-[220px]",
+    },
+    {
+      id: "value",
+      header: t("settings:systemConfig.table.value"),
+      cell: (config) => config.value,
+      widthClassName: "min-w-[280px]",
+      cellClassName: "min-w-0 max-w-md truncate",
+    },
+    {
+      id: "actions",
+      header: t("settings:systemConfig.table.actions"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (config) => (
+        <DataTableActions>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEditForm(config)}
+            aria-label={t("settings:systemConfig.table.editAria", { name: config.name })}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteId(config.id)}
+            aria-label={t("settings:systemConfig.table.deleteAria", { name: config.name })}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </DataTableActions>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Konfigurasi Sistem</h1>
+        <h1 className="text-2xl font-bold">{t("settings:systemConfig.page.title")}</h1>
         <Button onClick={openCreateForm}>
           <Plus className="mr-2 h-4 w-4" />
-          Tambah Konfigurasi
+          {t("settings:systemConfig.page.addConfig")}
         </Button>
       </div>
 
-      <Table variant="comfortable">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nama</TableHead>
-              <TableHead>Nilai</TableHead>
-              <TableHead className="w-[100px]">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-[80px]" /></TableCell>
-                </TableRow>
-              ))
-            ) : configs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground">
-                  Tidak ada data
-                </TableCell>
-              </TableRow>
-            ) : (
-              configs.map((config) => (
-                <TableRow key={config.id}>
-                  <TableCell className="font-medium">{config.name}</TableCell>
-                  <TableCell className="max-w-md truncate">{config.value}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditForm(config)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(config.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        rows={configs}
+        rowKey={(config) => config.id}
+        loading={isLoading}
+        loadingRowCount={5}
+        emptyMessage={t("settings:systemConfig.table.empty")}
+        variant="comfortable"
+      />
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingConfig ? "Edit Konfigurasi" : "Tambah Konfigurasi"}
+              {editingConfig ? t("settings:systemConfig.form.editTitle") : t("settings:systemConfig.form.addTitle")}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(requestSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Konfigurasi</Label>
+              <Label htmlFor="name">{t("settings:systemConfig.form.name")}</Label>
               <Input
                 id="name"
                 {...register("name")}
-                placeholder="Masukkan nama konfigurasi"
+                placeholder={t("settings:systemConfig.form.namePlaceholder")}
               />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -201,11 +204,11 @@ function ConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="value">Nilai</Label>
+              <Label htmlFor="value">{t("settings:systemConfig.form.value")}</Label>
               <Input
                 id="value"
                 {...register("value")}
-                placeholder="Masukkan nilai konfigurasi"
+                placeholder={t("settings:systemConfig.form.valuePlaceholder")}
               />
               {errors.value && (
                 <p className="text-sm text-destructive">{errors.value.message}</p>
@@ -218,13 +221,13 @@ function ConfigPage() {
                 variant="outline"
                 onClick={() => setIsFormOpen(false)}
               >
-                Batal
+                {t("common:actions.cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {editingConfig ? "Simpan" : "Tambah"}
+                {editingConfig ? t("common:actions.save") : t("common:actions.add")}
               </Button>
             </div>
           </form>
@@ -234,9 +237,33 @@ function ConfigPage() {
       <ConfirmDialog
         open={deleteId !== null}
         onOpenChange={() => setDeleteId(null)}
-        title="Hapus Konfigurasi"
-        description="Apakah Anda yakin ingin menghapus konfigurasi ini?"
+        title={t("settings:systemConfig.confirmDelete.title")}
+        description={t("settings:systemConfig.confirmDelete.description")}
+        entityName={configs.find((config) => config.id === deleteId)?.name}
+        impactItems={[
+          t("settings:systemConfig.confirmDelete.impact1"),
+          t("settings:systemConfig.confirmDelete.impact2"),
+        ]}
+        recoveryHint={t("settings:systemConfig.confirmDelete.recoveryHint")}
+        variant="destructive"
         onConfirm={handleDelete}
+        confirmText={t("common:actions.delete")}
+      />
+
+      <ConfirmDialog
+        open={submitPayload !== null}
+        onOpenChange={(open) => {
+          if (!open) setSubmitPayload(null)
+        }}
+        title={editingConfig ? t("settings:systemConfig.confirmSubmit.editTitle") : t("settings:systemConfig.confirmSubmit.addTitle")}
+        description={editingConfig ? t("settings:systemConfig.confirmSubmit.editDescription") : t("settings:systemConfig.confirmSubmit.addDescription")}
+        entityName={submitPayload?.name}
+        impactItems={[
+          t("settings:systemConfig.confirmSubmit.impact1"),
+          t("settings:systemConfig.confirmSubmit.impact2"),
+        ]}
+        onConfirm={confirmSubmit}
+        confirmText={editingConfig ? t("common:actions.save") : t("common:actions.add")}
       />
     </div>
   )

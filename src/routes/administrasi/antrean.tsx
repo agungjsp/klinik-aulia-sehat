@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
  
@@ -35,6 +36,7 @@ import { useAuthStore } from "@/stores/auth"
 import { cn, sortPoliesWithUmumFirst, getDefaultPolyId } from "@/lib/utils"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 import { getApiErrorMessage } from "@/lib/api-error"
+import { DataTableToolbar } from "@/components/data-table"
 import type { Poly, Reservation, QueueStatusName, Schedule, Patient } from "@/types"
 
 const EMPTY_POLIES: Poly[] = []
@@ -53,22 +55,20 @@ export const Route = createFileRoute("/administrasi/antrean")({
   validateSearch: antreanSearchSchema,
 })
 
-// Registration form schema - schedule_id is now REQUIRED
-const registerSchema = z.object({
-  patient_name: z.string().min(1, "Nama pasien wajib diisi"),
-  whatsapp_number: z.string().min(10, "Nomor WhatsApp minimal 10 digit"),
-  email: z.string().email("Email tidak valid").optional().or(z.literal("")),
-  no_bpjs: z.string().optional(),
-  bpjs: z.boolean(),
-  poly_id: z.number({ message: "Pilih poli" }),
-  schedule_id: z.number({ message: "Pilih jadwal dokter" }),
-  date: z.string(),
-})
-
-type RegisterForm = z.infer<typeof registerSchema>
+type RegisterForm = {
+  patient_name: string
+  whatsapp_number: string
+  email?: string
+  no_bpjs?: string
+  bpjs: boolean
+  poly_id: number
+  schedule_id: number
+  date: string
+}
 
 
 function AdministrasiAntreanPage() {
+  const { t } = useTranslation(["common", "queue", "adminQueue"])
   const navigate = useNavigate({ from: "/administrasi/antrean" })
   const search = Route.useSearch() ?? {}
   const { user } = useAuthStore()
@@ -141,10 +141,12 @@ function AdministrasiAntreanPage() {
     title: string
     description: string
   } | null>(null)
+  const [registerPayload, setRegisterPayload] = useState<RegisterForm | null>(null)
 
   // Registration form state
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [showSchedulePicker, setShowSchedulePicker] = useState(false)
+  const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1)
   const { data: scheduleData, isLoading: scheduleLoading } = useScheduleList({
     month: new Date(selectedDate).getMonth() + 1,
     year: new Date(selectedDate).getFullYear(),
@@ -160,7 +162,18 @@ function AdministrasiAntreanPage() {
     setValue,
     formState: { errors },
   } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(
+      z.object({
+        patient_name: z.string().min(1, t("errors:validation.required", { field: t("adminQueue:form.patientName") })),
+        whatsapp_number: z.string().min(10, t("errors:validation.minLength", { field: t("adminQueue:form.whatsappNumber"), min: 10 })),
+        email: z.string().email(t("errors:validation.email")).optional().or(z.literal("")),
+        no_bpjs: z.string().optional(),
+        bpjs: z.boolean(),
+        poly_id: z.number({ message: t("errors:validation.required", { field: t("common:labels.poly") }) }),
+        schedule_id: z.number({ message: t("errors:validation.required", { field: t("nav:items.doctorSchedule") }) }),
+        date: z.string(),
+      }),
+    ),
     defaultValues: {
       bpjs: true,
       date: selectedDate,
@@ -252,15 +265,15 @@ function AdministrasiAntreanPage() {
     try {
       const reservationId = pendingAction.reservation.id
       if (!reservationId) {
-        toast.error("Data reservasi tidak tersedia.")
+        toast.error(t("adminQueue:toasts.reservationDataUnavailable"))
         return
       }
       if (pendingAction.action === "noshow") {
         await noShowMutation.mutateAsync(reservationId)
-        toast.success("Pasien ditandai tidak hadir")
+        toast.success(t("adminQueue:toasts.patientMarkedNoShow"))
       } else {
         await cancelledMutation.mutateAsync(reservationId)
-        toast.success("Reservasi dibatalkan")
+        toast.success(t("adminQueue:toasts.reservationCancelled"))
       }
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -282,12 +295,14 @@ function AdministrasiAntreanPage() {
       date: selectedDate,
     })
     setShowSchedulePicker(false)
+    setRegisterStep(1)
     setIsFormOpen(true)
   }
 
   const handleScheduleSelect = (scheduleId: number) => {
     setValue("schedule_id", scheduleId, { shouldValidate: true })
     setShowSchedulePicker(false)
+    setRegisterStep(3)
   }
 
   const handlePatientSelect = (patient: Patient) => {
@@ -300,22 +315,33 @@ function AdministrasiAntreanPage() {
     }
   }
 
-  const onSubmit = handleSubmit(async (data) => {
+  const requestRegisterSubmit = handleSubmit(async (data) => {
+    setRegisterPayload(data)
+  })
+
+  const confirmRegisterSubmit = async () => {
+    if (!registerPayload) return
     try {
       const result = await createReservationMutation.mutateAsync({
-        patient_name: data.patient_name,
-        whatsapp_number: data.whatsapp_number,
-        email: data.email || undefined,
-        no_bpjs: data.no_bpjs || undefined,
-        bpjs: data.bpjs,
-        poly_id: data.poly_id,
-        schedule_id: data.schedule_id,
-        date: data.date,
+        patient_name: registerPayload.patient_name,
+        whatsapp_number: registerPayload.whatsapp_number,
+        email: registerPayload.email || undefined,
+        no_bpjs: registerPayload.no_bpjs || undefined,
+        bpjs: registerPayload.bpjs,
+        poly_id: registerPayload.poly_id,
+        schedule_id: registerPayload.schedule_id,
+        date: registerPayload.date,
       })
       
       const queueNumber = result.data?.queue?.queue_number
-      toast.success(`Pasien berhasil didaftarkan${queueNumber ? ` - Nomor antrean: ${queueNumber}` : ""}`)
+      toast.success(
+        queueNumber
+          ? t("adminQueue:toasts.patientRegisteredWithQueue", { queueNumber })
+          : t("adminQueue:toasts.patientRegistered"),
+      )
       setIsFormOpen(false)
+      setRegisterStep(1)
+      setRegisterPayload(null)
     } catch (error: unknown) {
       // Handle quota exceeded error specifically
       const errorMessage = getApiErrorMessage(error)
@@ -324,7 +350,7 @@ function AdministrasiAntreanPage() {
         (normalizedMessage.includes("whatsapp") || normalizedMessage.includes("bpjs")) &&
         (normalizedMessage.includes("already registered") || normalizedMessage.includes("sudah terdaftar"))
       ) {
-        toast.error("Nomor WhatsApp atau BPJS sudah terdaftar dengan nama pasien lain.")
+        toast.error(t("adminQueue:toasts.duplicateContactOrBpjs"))
         return
       }
       if (
@@ -333,14 +359,14 @@ function AdministrasiAntreanPage() {
         normalizedMessage.includes("penuh") ||
         normalizedMessage.includes("full")
       ) {
-        toast.error("Kuota jadwal sudah penuh. Silakan pilih jadwal lain.")
+        toast.error(t("adminQueue:toasts.scheduleQuotaFull"))
         // Refetch to get latest quota state
         refetch()
       } else {
         toast.error(errorMessage)
       }
     }
-  })
+  }
 
   // Helper to format queue number
   const formatQueueNumber = (num: number | string) => String(num).padStart(3, "0")
@@ -352,7 +378,7 @@ function AdministrasiAntreanPage() {
     <div className="space-y-6">
       {/* Shared Header */}
       <AntreanHeader
-        title="Pendaftaran & Antrean"
+        title={t("adminQueue:header.title")}
         date={selectedDate}
         selectedPolyId={selectedPolyId}
         selectedScheduleId={selectedScheduleId}
@@ -367,14 +393,14 @@ function AdministrasiAntreanPage() {
       <div className="flex justify-end">
         <Button onClick={openRegisterForm}>
           <Plus className="mr-2 h-4 w-4" />
-          Daftar Pasien
+          {t("adminQueue:actions.registerPatient")}
         </Button>
       </div>
 
       {/* Queue List with Filters */}
       <div className="rounded-lg border">
         <div className="border-b p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="font-semibold">Daftar Antrean Hari Ini</h2>
+          <h2 className="font-semibold">{t("adminQueue:list.todayQueueList")}</h2>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={filterPoly} onValueChange={setFilterPoly}>
@@ -382,11 +408,11 @@ function AdministrasiAntreanPage() {
                 {polyLoading ? (
                   <Skeleton className="h-4 w-20" />
                 ) : (
-                  <SelectValue placeholder="Semua Poli" />
+                  <SelectValue placeholder={t("adminQueue:filters.allPolies")} />
                 )}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Poli</SelectItem>
+                <SelectItem value="all">{t("adminQueue:filters.allPolies")}</SelectItem>
                 {polies.map((poly) => (
                   <SelectItem key={poly.id} value={String(poly.id)}>
                     {poly.name}
@@ -397,14 +423,14 @@ function AdministrasiAntreanPage() {
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Semua Status" />
+                <SelectValue placeholder={t("adminQueue:filters.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="IN_PROGRESS">Sedang Proses</SelectItem>
+                <SelectItem value="all">{t("adminQueue:filters.allStatuses")}</SelectItem>
+                <SelectItem value="IN_PROGRESS">{t("adminQueue:filters.inProgress")}</SelectItem>
                 {Object.entries(QUEUE_STATUS_CONFIG).map(([key, config]) => (
                   <SelectItem key={key} value={key}>
-                    {config.label}
+                    {t(config.translationKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -421,8 +447,8 @@ function AdministrasiAntreanPage() {
           ) : filteredReservations.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               {reservations.length === 0
-                ? "Belum ada antrean hari ini"
-                : "Tidak ada antrean yang sesuai filter"}
+                ? t("adminQueue:list.noQueueToday")
+                : t("adminQueue:list.noQueueMatchFilter")}
             </p>
           ) : (
             filteredReservations.map((reservation: Reservation) => {
@@ -442,13 +468,15 @@ function AdministrasiAntreanPage() {
                       <p className="font-medium">{reservation.patient?.patient_name || "-"}</p>
                       <p className="text-sm text-muted-foreground">
                         {reservation.poly?.name || "-"} •{" "}
-                        {reservation.bpjs ? "BPJS" : "Umum"}
+                        {reservation.bpjs ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={statusConfig?.variant || "outline"}>
-                      {statusConfig?.label || statusName || "Unknown"}
+                      {statusConfig
+                        ? t(statusConfig.translationKey)
+                        : statusName || t("common:states.unknown")}
                     </Badge>
                     {statusName === "WAITING" && (
                       <Button
@@ -458,8 +486,10 @@ function AdministrasiAntreanPage() {
                           handleAction(
                             reservation,
                             "noshow",
-                            "Tandai Tidak Hadir",
-                            `Tandai pasien ${reservation.patient?.patient_name} sebagai tidak hadir?`
+                            t("adminQueue:confirm.markNoShowTitle"),
+                            t("adminQueue:confirm.markNoShowDescription", {
+                              name: reservation.patient?.patient_name || "-",
+                            })
                           )
                         }
                         disabled={noShowMutation.isPending}
@@ -489,185 +519,226 @@ function AdministrasiAntreanPage() {
       </div>
 
       {/* Register Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Pendaftaran Pasien</DialogTitle>
-          </DialogHeader>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{t("adminQueue:dialog.title")}</DialogTitle>
+            </DialogHeader>
 
-          <form onSubmit={onSubmit} className="space-y-5">
+          <form onSubmit={requestRegisterSubmit} className="space-y-5">
+            <div className="grid grid-cols-3 gap-2 rounded-lg border border-border/70 bg-muted/20 p-2">
+              {[
+                { id: 1 as const, label: t("adminQueue:dialog.steps.patient") },
+                { id: 2 as const, label: t("adminQueue:dialog.steps.polyAndSchedule") },
+                { id: 3 as const, label: t("adminQueue:dialog.steps.confirmation") },
+              ].map((step) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  className={cn(
+                    "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                    registerStep === step.id
+                      ? "bg-primary text-primary-foreground"
+                      : registerStep > step.id
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground",
+                  )}
+                  onClick={() => setRegisterStep(step.id)}
+                >
+                  {step.id}. {step.label}
+                </button>
+              ))}
+            </div>
+
             {/* Patient Type */}
-            <div className="space-y-2">
-              <Label>Tipe Pasien</Label>
-              <Controller
-                name="bpjs"
-                control={control}
-                render={({ field }) => (
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={field.value ? "default" : "outline"}
-                      onClick={() => field.onChange(true)}
-                      className="flex-1"
-                    >
-                      BPJS
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={!field.value ? "default" : "outline"}
-                      onClick={() => field.onChange(false)}
-                      className="flex-1"
-                    >
-                      Umum
-                    </Button>
+            {registerStep === 1 && (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label>{t("adminQueue:form.patientType")}</Label>
+                  <Controller
+                    name="bpjs"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={field.value ? "default" : "outline"}
+                          onClick={() => field.onChange(true)}
+                          className="flex-1"
+                        >
+                          {t("queue:patientTypes.bpjs")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={!field.value ? "default" : "outline"}
+                          onClick={() => field.onChange(false)}
+                          className="flex-1"
+                        >
+                          {t("queue:patientTypes.general")}
+                        </Button>
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="patient_name">{t("adminQueue:form.patientName")}</Label>
+                  <Controller
+                    name="patient_name"
+                    control={control}
+                    render={({ field }) => (
+                      <PatientAutocomplete
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onPatientSelect={handlePatientSelect}
+                        placeholder={t("adminQueue:form.patientNamePlaceholder")}
+                      />
+                    )}
+                  />
+                  {errors.patient_name && (
+                    <p className="text-sm text-destructive">{errors.patient_name.message}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsapp_number">{t("adminQueue:form.whatsappNumber")}</Label>
+                    <Input
+                      id="whatsapp_number"
+                      placeholder={t("adminQueue:form.whatsappPlaceholder")}
+                      {...register("whatsapp_number")}
+                    />
+                    {errors.whatsapp_number && (
+                      <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">{t("adminQueue:form.emailOptional")}</Label>
+                    <Input id="email" type="email" {...register("email")} />
+                    {errors.email && (
+                      <p className="text-sm text-destructive">{errors.email.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {isBpjs && (
+                  <div className="space-y-2">
+                    <Label htmlFor="no_bpjs">{t("adminQueue:form.bpjsNumber")}</Label>
+                    <Input id="no_bpjs" placeholder={t("adminQueue:form.bpjsPlaceholder")} {...register("no_bpjs")} />
                   </div>
                 )}
-              />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="patient_name">Nama Pasien</Label>
-              <Controller
-                name="patient_name"
-                control={control}
-                render={({ field }) => (
-                  <PatientAutocomplete
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    onPatientSelect={handlePatientSelect}
-                    placeholder="Cari atau ketik nama pasien..."
-                  />
-                )}
-              />
-              {errors.patient_name && (
-                <p className="text-sm text-destructive">{errors.patient_name.message}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp_number">No. WhatsApp</Label>
-                <Input
-                  id="whatsapp_number"
-                  placeholder="08xxxxxxxxxx"
-                  {...register("whatsapp_number")}
-                />
-                {errors.whatsapp_number && (
-                  <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email (opsional)</Label>
-                <Input id="email" type="email" {...register("email")} />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
-                )}
-              </div>
-            </div>
-
-            {isBpjs && (
-              <div className="space-y-2">
-                <Label htmlFor="no_bpjs">No. BPJS</Label>
-                <Input id="no_bpjs" placeholder="Nomor kartu BPJS" {...register("no_bpjs")} />
+                <div className="flex justify-end">
+                  <Button type="button" onClick={() => setRegisterStep(2)}>{t("adminQueue:form.continueToPolySchedule")}</Button>
+                </div>
               </div>
             )}
 
-            {/* Step 1: Select Poli */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                  1
-                </div>
-                <Label className="text-base font-semibold">Pilih Poli</Label>
-              </div>
-              <PolySelect
-                value={formPolyId || undefined}
-                onChange={(value) => {
-                  if (value) {
-                    setValue("poly_id", value)
-                    // Reset schedule when poly changes
-                    setValue("schedule_id", undefined as unknown as number)
-                    setShowSchedulePicker(true)
-                  }
-                }}
-                placeholder="Pilih poli tujuan"
-              />
-              {errors.poly_id && (
-                <p className="text-sm text-destructive">{errors.poly_id.message}</p>
-              )}
-            </div>
-
-            {/* Step 2: Select Schedule */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
-                    selectedPolyId 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    2
+            {registerStep === 2 && (
+              <div className="space-y-4">
+                <DataTableToolbar>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-semibold">{t("adminQueue:form.selectPolyAndSchedule")}</Label>
+                    <Badge variant="destructive" className="text-xs">{t("adminQueue:form.required")}</Badge>
                   </div>
-                  <Label className={cn(
-                    "text-base font-semibold",
-                    !selectedPolyId && "text-muted-foreground"
-                  )}>
-                    Pilih Jadwal Dokter
-                  </Label>
-                  <Badge variant="destructive" className="text-xs">Wajib</Badge>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CalendarDays className="h-4 w-4" />
+                    <span>{t("adminQueue:form.today")}</span>
+                  </div>
+                </DataTableToolbar>
+
+                <div className="space-y-2">
+                  <PolySelect
+                    value={formPolyId || undefined}
+                    onChange={(value) => {
+                      if (value) {
+                        setValue("poly_id", value)
+                        setValue("schedule_id", undefined as unknown as number)
+                        setShowSchedulePicker(true)
+                      }
+                    }}
+                    placeholder={t("adminQueue:form.selectPolyPlaceholder")}
+                  />
+                  {errors.poly_id && (
+                    <p className="text-sm text-destructive">{errors.poly_id.message}</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4" />
-                  <span>Hari ini</span>
+
+                {!formPolyId ? (
+                  <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-center text-muted-foreground">
+                    <p>{t("adminQueue:form.selectPolyFirst")}</p>
+                  </div>
+                ) : formScheduleId && !showSchedulePicker ? (
+                  <div className="space-y-2">
+                    <SelectedScheduleSummary
+                      schedule={selectedSchedule}
+                      reservations={reservations}
+                      onClear={() => setShowSchedulePicker(true)}
+                    />
+                    {quotaInfo?.isFull && (
+                      <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <p>{t("adminQueue:form.scheduleQuotaFull")}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <SchedulePicker
+                      schedules={filteredSchedules}
+                      reservations={reservations}
+                      selectedScheduleId={formScheduleId}
+                      onSelect={handleScheduleSelect}
+                      isLoading={scheduleLoading}
+                    />
+                    {errors.schedule_id && (
+                      <p className="text-sm text-destructive">{errors.schedule_id.message}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <Button type="button" variant="outline" onClick={() => setRegisterStep(1)}>{t("adminQueue:form.back")}</Button>
+                  <Button type="button" onClick={() => setRegisterStep(3)} disabled={!formScheduleId}>{t("adminQueue:form.continueToConfirmation")}</Button>
                 </div>
               </div>
+            )}
 
-              {!formPolyId ? (
-                <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center text-muted-foreground">
-                  <p>Pilih poli terlebih dahulu untuk melihat jadwal dokter</p>
+            {registerStep === 3 && (
+              <div className="space-y-4 rounded-lg border border-border/80 bg-muted/10 p-4">
+                <h3 className="text-sm font-semibold">{t("adminQueue:form.registrationSummary")}</h3>
+                <div className="grid gap-2 text-sm">
+                  <p><span className="text-muted-foreground">{t("adminQueue:form.summary.patient")}:</span> {watch("patient_name") || "-"}</p>
+                  <p><span className="text-muted-foreground">{t("adminQueue:form.summary.whatsappNumber")}:</span> {watch("whatsapp_number") || "-"}</p>
+                  <p><span className="text-muted-foreground">{t("adminQueue:form.summary.type")}:</span> {watch("bpjs") ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}</p>
+                  <p><span className="text-muted-foreground">{t("adminQueue:form.summary.poly")}:</span> {polies.find((poly) => poly.id === watch("poly_id"))?.name || "-"}</p>
+                  <p><span className="text-muted-foreground">{t("adminQueue:form.summary.schedule")}:</span> {selectedSchedule ? `${selectedSchedule.start_time.slice(0, 5)} - ${selectedSchedule.end_time.slice(0, 5)}` : "-"}</p>
                 </div>
-              ) : formScheduleId && !showSchedulePicker ? (
-                // Show selected schedule summary
-                <div className="space-y-2">
-                  <SelectedScheduleSummary
-                    schedule={selectedSchedule}
-                    reservations={reservations}
-                    onClear={() => setShowSchedulePicker(true)}
-                  />
-                  {quotaInfo?.isFull && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
-                      <AlertTriangle className="h-4 w-4 shrink-0" />
-                      <p>Kuota jadwal ini sudah penuh! Silakan pilih jadwal lain.</p>
-                    </div>
-                  )}
+
+                {(quotaInfo?.isFull ?? false) && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {t("adminQueue:form.scheduleQuotaFullPrompt")}
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <Button type="button" variant="outline" onClick={() => setRegisterStep(2)}>{t("adminQueue:form.back")}</Button>
+                  <Button type="submit" disabled={isSubmitDisabled}>
+                    {createReservationMutation.isPending && <LoadingSpinner size="sm" className="mr-2" />}
+                    {quotaInfo?.isFull ? t("adminQueue:form.submitQuotaFull") : !formScheduleId ? t("adminQueue:form.submitChooseSchedule") : t("adminQueue:form.submitRegister")}
+                  </Button>
                 </div>
-              ) : (
-                // Show schedule picker
-                <div className="space-y-2">
-                  <SchedulePicker
-                    schedules={filteredSchedules}
-                    reservations={reservations}
-                    selectedScheduleId={formScheduleId}
-                    onSelect={handleScheduleSelect}
-                    isLoading={scheduleLoading}
-                  />
-                  {errors.schedule_id && (
-                    <p className="text-sm text-destructive">{errors.schedule_id.message}</p>
-                  )}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <input type="hidden" {...register("date")} value={selectedDate} />
 
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
-                Batal
+                {t("common:actions.cancel")}
               </Button>
-              <Button type="submit" disabled={isSubmitDisabled}>
-                {createReservationMutation.isPending && <LoadingSpinner size="sm" className="mr-2" />}
-                {quotaInfo?.isFull ? "Kuota Penuh" : !formScheduleId ? "Pilih Jadwal" : "Daftarkan"}
+              <Button type="button" variant="ghost" onClick={() => setRegisterStep(1)}>
+                {t("adminQueue:form.resetSteps")}
               </Button>
             </div>
           </form>
@@ -679,7 +750,28 @@ function AdministrasiAntreanPage() {
         onOpenChange={setConfirmOpen}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
+        entityName={pendingAction?.reservation.patient?.patient_name}
+        impactItems={[
+          t("adminQueue:confirm.impacts.queueStatusChanged"),
+          t("adminQueue:confirm.impacts.visibleRealtime"),
+        ]}
         onConfirm={confirmAction}
+      />
+
+      <ConfirmDialog
+        open={registerPayload !== null}
+        onOpenChange={(open) => {
+          if (!open) setRegisterPayload(null)
+        }}
+        title={t("adminQueue:confirm.registerTitle")}
+        description={t("adminQueue:confirm.registerDescription")}
+        entityName={registerPayload?.patient_name}
+        impactItems={[
+          t("adminQueue:confirm.registerImpact1"),
+          t("adminQueue:confirm.registerImpact2"),
+        ]}
+        onConfirm={confirmRegisterSubmit}
+        confirmText={t("adminQueue:actions.registerPatient")}
       />
     </div>
   )
