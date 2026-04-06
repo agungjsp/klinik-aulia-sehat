@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Play, UserCheck } from "lucide-react"
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/perawat/antrean")({
 })
 
 function PerawatAntreanPage() {
+  const { t } = useTranslation(["nurseQueue", "queue", "common"])
   const navigate = useNavigate({ from: "/perawat/antrean" })
   const search = Route.useSearch() ?? {}
   const { user } = useAuthStore()
@@ -128,7 +130,7 @@ function PerawatAntreanPage() {
     if (!pendingAction) return
     const reservationId = pendingAction.reservation.id
     if (!reservationId) {
-      toast.error("Data reservasi tidak tersedia.")
+      toast.error(t("nurseQueue:nurse.toasts.reservationDataUnavailable"))
       return
     }
 
@@ -136,13 +138,13 @@ function PerawatAntreanPage() {
       if (pendingAction.action === "anamnesa") {
         const result = await toAnamnesaMutation.mutateAsync(reservationId)
         if (result.autoNoShow) {
-          toast.warning("Pasien tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW")
+          toast.warning(t("nurseQueue:nurse.toasts.autoNoShow"))
         } else {
-          toast.success("Pasien dipanggil untuk anamnesa")
+          toast.success(t("nurseQueue:nurse.toasts.calledForAnamnesis"))
         }
       } else {
         await toWaitingDoctorMutation.mutateAsync(reservationId)
-        toast.success("Anamnesa selesai, pasien menunggu dokter")
+        toast.success(t("nurseQueue:nurse.toasts.movedToDoctorQueue"))
       }
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -161,7 +163,7 @@ function PerawatAntreanPage() {
     <div className="space-y-6">
       {/* Shared Header */}
       <AntreanHeader
-        title="Antrean Anamnesa"
+        title={t("nurseQueue:nurse.headerTitle")}
         date={selectedDate}
         selectedPolyId={selectedPolyId}
         reservations={allReservations}
@@ -174,14 +176,14 @@ function PerawatAntreanPage() {
         {/* Sedang Anamnesa */}
         <div className="rounded-lg border">
           <div className="border-b bg-orange-50 p-4">
-            <h2 className="font-semibold text-orange-700">Sedang Anamnesa</h2>
-            <p className="text-sm text-orange-600">{inAnamnesa.length} pasien</p>
+            <h2 className="font-semibold text-orange-700">{t("nurseQueue:nurse.sections.inAnamnesis")}</h2>
+            <p className="text-sm text-orange-600">{t("nurseQueue:nurse.sections.patientCount", { count: inAnamnesa.length })}</p>
           </div>
           <div className="p-4 space-y-3">
             {isLoading ? (
               <Skeleton className="h-20 w-full" />
             ) : inAnamnesa.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Tidak ada pasien</p>
+              <p className="text-center text-muted-foreground py-4">{t("nurseQueue:nurse.sections.noPatient")}</p>
             ) : (
               inAnamnesa.map((reservation) => (
                 <div key={reservation.id} className="rounded-lg border bg-orange-50 p-4">
@@ -194,7 +196,7 @@ function PerawatAntreanPage() {
                       </p>
                       <p className="font-medium">{reservation.patient?.patient_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {reservation.poly?.name} • {reservation.bpjs ? "BPJS" : "Umum"}
+                        {reservation.poly?.name} • {reservation.bpjs ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}
                       </p>
                     </div>
                     <Button
@@ -203,14 +205,16 @@ function PerawatAntreanPage() {
                         handleAction(
                           reservation,
                           "waitingdoctor",
-                          "Selesai Anamnesa",
-                          `Selesaikan anamnesa untuk pasien ${reservation.patient?.patient_name} dan arahkan ke dokter?`
+                          t("nurseQueue:nurse.confirmations.finishTitle"),
+                          t("nurseQueue:nurse.confirmations.finishDescription", {
+                            name: reservation.patient?.patient_name || "-",
+                          })
                         )
                       }
                       disabled={isPending}
                     >
                       <UserCheck className="mr-1 h-4 w-4" />
-                      Selesai
+                      {t("nurseQueue:nurse.actions.finish")}
                     </Button>
                   </div>
                 </div>
@@ -222,14 +226,14 @@ function PerawatAntreanPage() {
         {/* Menunggu Anamnesa */}
         <div className="rounded-lg border">
           <div className="border-b bg-blue-50 p-4">
-            <h2 className="font-semibold text-blue-700">Menunggu Anamnesa</h2>
-            <p className="text-sm text-blue-600">{waitingAnamnesa.length} pasien</p>
+            <h2 className="font-semibold text-blue-700">{t("nurseQueue:nurse.sections.waitingAnamnesis")}</h2>
+            <p className="text-sm text-blue-600">{t("nurseQueue:nurse.sections.patientCount", { count: waitingAnamnesa.length })}</p>
           </div>
           <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
             ) : waitingAnamnesa.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Tidak ada pasien menunggu</p>
+              <p className="text-center text-muted-foreground py-4">{t("nurseQueue:nurse.sections.noWaitingPatient")}</p>
             ) : (
               waitingAnamnesa.map((reservation, idx) => (
                 <div
@@ -247,7 +251,9 @@ function PerawatAntreanPage() {
                     <div>
                       <p className="font-medium">{reservation.patient?.patient_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Daftar: {reservation.queue?.re_reservation_time?.slice(0, 5) || "-"}
+                        {t("nurseQueue:nurse.sections.finishedAt", {
+                          time: reservation.queue?.re_reservation_time?.slice(0, 5) || "-",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -258,20 +264,22 @@ function PerawatAntreanPage() {
                         handleAction(
                           reservation,
                           "anamnesa",
-                          "Panggil Pasien",
-                          `Panggil pasien ${reservation.patient?.patient_name} ke ruang anamnesa?`
+                          t("nurseQueue:nurse.confirmations.callTitle"),
+                          t("nurseQueue:nurse.confirmations.callDescription", {
+                            name: reservation.patient?.patient_name || "-",
+                          })
                         )
                       }
                       disabled={isPending}
                     >
                       <Play className="mr-1 h-4 w-4" />
-                      Panggil
+                      {t("nurseQueue:nurse.actions.callPatient")}
                     </Button>
                   )}
                   {idx === 0 && inAnamnesa.length > 0 && (
-                    <Badge variant="secondary">Tunggu pasien selesai</Badge>
+                    <Badge variant="secondary">{t("nurseQueue:nurse.actions.waitUntilDone")}</Badge>
                   )}
-                  {idx > 0 && <Badge variant="outline">Antrean ke-{idx + 1}</Badge>}
+                  {idx > 0 && <Badge variant="outline">{t("nurseQueue:nurse.actions.queueOrder", { order: idx + 1 })}</Badge>}
                 </div>
               ))
             )}

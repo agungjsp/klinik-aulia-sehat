@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
@@ -21,10 +22,12 @@ export function PaginationControls({
   totalItems,
   isPending = false,
 }: PaginationControlsProps) {
+  const { t } = useTranslation(["common"])
+
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Show</span>
+        <span>{t("pagination.show")}</span>
         <Select
           value={String(perPage)}
           onValueChange={(v) => onPerPageChange(Number(v))}
@@ -41,10 +44,10 @@ export function PaginationControls({
             ))}
           </SelectContent>
         </Select>
-        <span>rows per page</span>
+        <span>{t("pagination.rowsPerPage")}</span>
         {totalItems !== undefined && (
           <span className="ml-2">
-            (Total {totalItems} items)
+            ({t("pagination.totalItems", { count: totalItems })})
           </span>
         )}
       </div>
@@ -58,7 +61,7 @@ export function PaginationControls({
           disabled={currentPage <= 1 || isPending}
         >
           <ChevronsLeft className="h-4 w-4" />
-          <span className="sr-only">First page</span>
+          <span className="sr-only">{t("pagination.firstPage")}</span>
         </Button>
         <Button
           variant="outline"
@@ -68,13 +71,13 @@ export function PaginationControls({
           disabled={currentPage <= 1 || isPending}
         >
           <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">Previous page</span>
+          <span className="sr-only">{t("pagination.previousPage")}</span>
         </Button>
         
         <div className="flex items-center gap-1 text-sm font-medium mx-2">
-          <span>Page</span>
+          <span>{t("pagination.page")}</span>
           <span className="min-w-[1.5rem] text-center">{currentPage}</span>
-          <span>of</span>
+          <span>{t("pagination.of")}</span>
           <span className="min-w-[1.5rem] text-center">{Math.max(1, totalPages)}</span>
         </div>
 
@@ -86,7 +89,7 @@ export function PaginationControls({
           disabled={currentPage >= totalPages || isPending}
         >
           <ChevronRight className="h-4 w-4" />
-          <span className="sr-only">Next page</span>
+          <span className="sr-only">{t("pagination.nextPage")}</span>
         </Button>
         <Button
           variant="outline"
@@ -96,7 +99,7 @@ export function PaginationControls({
           disabled={currentPage >= totalPages || isPending}
         >
           <ChevronsRight className="h-4 w-4" />
-          <span className="sr-only">Last page</span>
+          <span className="sr-only">{t("pagination.lastPage")}</span>
         </Button>
       </div>
     </div>

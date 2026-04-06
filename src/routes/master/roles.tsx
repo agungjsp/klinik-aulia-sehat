@@ -3,9 +3,9 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { id } from "date-fns/locale"
 import { Plus, Pencil, Trash2, RotateCcw, Search } from "lucide-react"
 import {
   useRoleList,
@@ -16,6 +16,7 @@ import {
   useRoleRestore,
   useDebouncedValue,
 } from "@/hooks"
+import { DataTable, DataTableActions } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,31 +26,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Role } from "@/types"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
+import type { DataTableColumn, Role } from "@/types"
 
 export const Route = createFileRoute("/master/roles")({
   component: RolesPage,
 })
 
-const roleSchema = z.object({
-  name: z.string().min(1, "Nama role wajib diisi"),
-})
-
-type RoleForm = z.infer<typeof roleSchema>
+type RoleForm = {
+  name: string
+}
 
 function RolesPage() {
+  const { t, i18n } = useTranslation(["master", "common"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
+  const roleSchema = z.object({
+    name: z.string().min(1, t("master:roles.validation.nameRequired")),
+  })
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebouncedValue(search, 500)
   const [activeTab, setActiveTab] = useState<"active" | "trashed">("active")
@@ -91,10 +87,10 @@ function RolesPage() {
     try {
       if (editingRole) {
         await updateMutation.mutateAsync({ id: editingRole.id, data })
-        toast.success("Role berhasil diupdate")
+        toast.success(t("master:roles.toasts.updated"))
       } else {
         await createMutation.mutateAsync(data)
-        toast.success("Role berhasil ditambahkan")
+        toast.success(t("master:roles.toasts.added"))
       }
       setIsFormOpen(false)
       reset()
@@ -107,7 +103,7 @@ function RolesPage() {
     if (!deleteId) return
     try {
       await deleteMutation.mutateAsync(deleteId)
-      toast.success("Role berhasil dihapus")
+      toast.success(t("master:roles.toasts.deleted"))
       setDeleteId(null)
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -118,7 +114,7 @@ function RolesPage() {
     if (!restoreId) return
     try {
       await restoreMutation.mutateAsync(restoreId)
-      toast.success("Role berhasil direstore")
+      toast.success(t("master:roles.toasts.restored"))
       setRestoreId(null)
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -127,17 +123,84 @@ function RolesPage() {
 
   const activeRoles = roleData?.data || []
   const trashedRoles = trashedData?.data || []
+  const currentRoles = activeTab === "active" ? activeRoles : trashedRoles
+  const isCurrentLoading = activeTab === "active" ? isLoading : isLoadingTrashed
+  const roleToDelete = activeRoles.find((role) => role.id === deleteId)
+  const roleToRestore = trashedRoles.find((role) => role.id === restoreId)
+  const columns: DataTableColumn<Role>[] = [
+    {
+      id: "id",
+      header: t("master:roles.table.id"),
+      cell: (role) => <span className="font-mono text-sm">{role.id}</span>,
+      widthClassName: "w-16",
+    },
+    {
+      id: "name",
+      header: t("master:roles.table.name"),
+      cell: (role) => <span className="font-medium">{role.name}</span>,
+      widthClassName: "min-w-[220px]",
+    },
+    {
+      id: "timestamp",
+      header: activeTab === "active" ? t("master:roles.table.created") : t("master:roles.table.deleted"),
+      cell: (role) => (
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(activeTab === "active" ? role.created_at : role.deleted_at!), "dd MMM yyyy HH:mm", { locale: dateFnsLocale })}
+        </span>
+      ),
+      widthClassName: "w-48",
+    },
+    {
+      id: "actions",
+      header: t("master:roles.table.actions"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (role) => (
+        <DataTableActions>
+          {activeTab === "active" ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openEditForm(role)}
+                aria-label={t("master:roles.table.editAria", { name: role.name })}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDeleteId(role.id)}
+                aria-label={t("master:roles.table.deleteAria", { name: role.name })}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRestoreId(role.id)}
+              aria-label={t("master:roles.table.restoreAria", { name: role.name })}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+        </DataTableActions>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Master Roles</h1>
-          <p className="text-muted-foreground">Kelola data role pengguna</p>
+          <h1 className="text-2xl font-bold">{t("master:roles.page.title")}</h1>
+          <p className="text-muted-foreground">{t("master:roles.page.description")}</p>
         </div>
         <Button onClick={openCreateForm}>
           <Plus className="mr-2 h-4 w-4" />
-          Tambah Role
+          {t("master:roles.page.addRole")}
         </Button>
       </div>
 
@@ -150,7 +213,7 @@ function RolesPage() {
           }`}
           onClick={() => setActiveTab("active")}
         >
-          Active ({activeRoles.length})
+          {t("master:common.tabs.active")} ({activeRoles.length})
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -160,7 +223,7 @@ function RolesPage() {
           }`}
           onClick={() => setActiveTab("trashed")}
         >
-          Trashed ({trashedRoles.length})
+          {t("master:common.tabs.trashed")} ({trashedRoles.length})
         </button>
       </div>
 
@@ -168,7 +231,7 @@ function RolesPage() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Cari role..."
+            placeholder={t("master:roles.page.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -176,92 +239,29 @@ function RolesPage() {
         </div>
       )}
 
-      <Table variant="comfortable">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">ID</TableHead>
-              <TableHead>Nama</TableHead>
-              <TableHead className="w-48">
-                {activeTab === "active" ? "Dibuat" : "Dihapus"}
-              </TableHead>
-              <TableHead className="w-24 text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(activeTab === "active" ? isLoading : isLoadingTrashed) ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                </TableRow>
-              ))
-            ) : (activeTab === "active" ? activeRoles : trashedRoles).length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  {activeTab === "active" ? "Tidak ada data role" : "Tidak ada data terhapus"}
-                </TableCell>
-              </TableRow>
-            ) : (
-              (activeTab === "active" ? activeRoles : trashedRoles).map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell className="font-mono text-sm">{role.id}</TableCell>
-                  <TableCell className="font-medium">{role.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(
-                      new Date(activeTab === "active" ? role.created_at : role.deleted_at!),
-                      "dd MMM yyyy HH:mm",
-                      { locale: id }
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {activeTab === "active" ? (
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditForm(role)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(role.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setRestoreId(role.id)}
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        rows={currentRoles}
+        rowKey={(role) => role.id}
+        loading={isCurrentLoading}
+        loadingRowCount={3}
+        emptyMessage={activeTab === "active" ? t("master:roles.page.emptyActive") : t("master:roles.page.emptyTrashed")}
+        variant="comfortable"
+      />
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingRole ? "Edit Role" : "Tambah Role"}
+              {editingRole ? t("master:roles.form.editTitle") : t("master:roles.form.addTitle")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Role</Label>
+              <Label htmlFor="name">{t("master:roles.form.roleName")}</Label>
               <Input
                 id="name"
-                placeholder="Masukkan nama role"
+                placeholder={t("master:roles.form.roleNamePlaceholder")}
                 {...register("name")}
                 aria-invalid={!!errors.name}
               />
@@ -275,7 +275,7 @@ function RolesPage() {
                 variant="outline"
                 onClick={() => setIsFormOpen(false)}
               >
-                Batal
+                {t("common:actions.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -284,7 +284,7 @@ function RolesPage() {
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <LoadingSpinner size="sm" className="mr-2" />
                 )}
-                {editingRole ? "Update" : "Simpan"}
+                {editingRole ? t("master:roles.form.submitUpdate") : t("common:actions.save")}
               </Button>
             </div>
           </form>
@@ -294,20 +294,28 @@ function RolesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Hapus Role"
-        description="Apakah Anda yakin ingin menghapus role ini? Data dapat direstore dari tab Trashed."
+        title={t("master:roles.confirmDelete.title")}
+        description={t("master:roles.confirmDelete.description")}
+        entityName={roleToDelete?.name}
+        impactItems={[
+          t("master:roles.confirmDelete.impact1"),
+          t("master:roles.confirmDelete.impact2"),
+        ]}
+        recoveryHint={t("master:roles.confirmDelete.recoveryHint")}
         onConfirm={handleDelete}
-        confirmText="Hapus"
+        confirmText={t("common:actions.delete")}
         variant="destructive"
       />
 
       <ConfirmDialog
         open={!!restoreId}
         onOpenChange={(open) => !open && setRestoreId(null)}
-        title="Restore Role"
-        description="Apakah Anda yakin ingin merestore role ini?"
+        title={t("master:roles.confirmRestore.title")}
+        description={t("master:roles.confirmRestore.description")}
+        entityName={roleToRestore?.name}
+        impactItems={[t("master:roles.confirmRestore.impact1")]}
         onConfirm={handleRestore}
-        confirmText="Restore"
+        confirmText={t("master:roles.confirmRestore.confirmText")}
       />
     </div>
   )

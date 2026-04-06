@@ -1,0 +1,82 @@
+const adminQueueEn = {
+  header: {
+    title: "Registration & Queue",
+  },
+  actions: {
+    registerPatient: "Register Patient",
+    markNoShow: "Mark as No Show",
+  },
+  filters: {
+    allPolies: "All Clinics",
+    allStatuses: "All Statuses",
+    inProgress: "In Progress",
+  },
+  list: {
+    todayQueueList: "Today's Queue List",
+    noQueueToday: "No queue yet today",
+    noQueueMatchFilter: "No queue matches the selected filter",
+  },
+  dialog: {
+    title: "Patient Registration",
+    steps: {
+      patient: "Patient",
+      polyAndSchedule: "Clinic & Schedule",
+      confirmation: "Confirmation",
+    },
+  },
+  form: {
+    patientType: "Patient Type",
+    patientName: "Patient Name",
+    patientNamePlaceholder: "Search or type patient name...",
+    whatsappNumber: "WhatsApp Number",
+    whatsappPlaceholder: "08xxxxxxxxxx",
+    emailOptional: "Email (optional)",
+    bpjsNumber: "BPJS Number",
+    bpjsPlaceholder: "BPJS card number",
+    continueToPolySchedule: "Continue to Clinic & Schedule",
+    selectPolyAndSchedule: "Select Clinic and Doctor Schedule",
+    required: "Required",
+    today: "Today",
+    selectPolyPlaceholder: "Select destination clinic",
+    selectPolyFirst: "Select a clinic first to see available doctor schedules.",
+    scheduleQuotaFull: "This schedule quota is full. Please choose another schedule.",
+    back: "Back",
+    continueToConfirmation: "Continue to Confirmation",
+    registrationSummary: "Registration Summary",
+    summary: {
+      patient: "Patient",
+      whatsappNumber: "WhatsApp Number",
+      type: "Type",
+      poly: "Clinic",
+      schedule: "Schedule",
+    },
+    scheduleQuotaFullPrompt: "Schedule quota is full. Choose another schedule before registering.",
+    submitQuotaFull: "Quota Full",
+    submitChooseSchedule: "Choose Schedule",
+    submitRegister: "Register",
+    resetSteps: "Restart Steps",
+  },
+  confirm: {
+    markNoShowTitle: "Mark as No Show",
+    markNoShowDescription: "Mark patient {{name}} as no show?",
+    impacts: {
+      queueStatusChanged: "Patient queue status will be changed.",
+      visibleRealtime: "This change will be visible to other staff in realtime.",
+    },
+    registerTitle: "Confirm Patient Registration",
+    registerDescription: "Register this patient to queue now?",
+    registerImpact1: "Queue number will be generated and activated immediately.",
+    registerImpact2: "Queue data will be visible in realtime to clinic staff.",
+  },
+  toasts: {
+    reservationDataUnavailable: "Reservation data is unavailable.",
+    patientMarkedNoShow: "Patient marked as no show",
+    reservationCancelled: "Reservation cancelled",
+    duplicateContactOrBpjs: "WhatsApp or BPJS number is already registered with another patient name.",
+    scheduleQuotaFull: "Schedule quota is full. Please choose another schedule.",
+    patientRegistered: "Patient registered successfully",
+    patientRegisteredWithQueue: "Patient registered successfully - Queue number: {{queueNumber}}",
+  },
+} as const
+
+export default adminQueueEn

@@ -1,21 +1,9 @@
 import { api } from "@/lib/axios"
-import type { ApiResponse, CheckupSchedule, CheckupScheduleListParams, CheckupScheduleRequest } from "@/types"
-
-interface CheckupScheduleListResponse {
-  status: "success" | "error"
-  message: string
-  data: CheckupSchedule[]
-  meta: {
-    current_page: number
-    per_page: number
-    total: number
-    last_page: number
-  }
-}
+import type { ApiResponse, CheckupSchedule, CheckupScheduleListParams, CheckupScheduleRequest, PaginatedResponse } from "@/types"
 
 export const checkupScheduleService = {
   getAll: async (params?: CheckupScheduleListParams) => {
-    const response = await api.get<CheckupScheduleListResponse>("/api/checkup-schedule", { params })
+    const response = await api.get<PaginatedResponse<CheckupSchedule>>("/api/checkup-schedule", { params })
     return response.data
   },
 

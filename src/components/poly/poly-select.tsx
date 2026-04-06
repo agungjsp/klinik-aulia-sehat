@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { Building2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { usePolyList } from "@/hooks"
 import {
   Select,
@@ -32,15 +33,21 @@ interface PolySelectProps {
 export function PolySelect({
   value,
   onChange,
-  placeholder = "Pilih poli",
+  placeholder,
   disabled = false,
   className,
   showIcon = true,
   showAll = false,
-  allLabel = "Semua Poli",
+  allLabel,
   allowNone = false,
-  noneLabel = "Tidak ada",
+  noneLabel,
 }: PolySelectProps) {
+  const { t } = useTranslation(["common"])
+
+  const resolvedPlaceholder = placeholder ?? t("labels.poly")
+  const resolvedAllLabel = allLabel ?? t("actions.all")
+  const resolvedNoneLabel = noneLabel ?? t("states.empty")
+
   const { data: polyData, isLoading } = usePolyList()
 
   const polies = useMemo(
@@ -72,19 +79,19 @@ export function PolySelect({
       <SelectTrigger className={cn("w-full", className)}>
         <div className="flex items-center gap-2">
           {showIcon && <Building2 className="h-4 w-4 text-muted-foreground" />}
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={resolvedPlaceholder} />
         </div>
       </SelectTrigger>
       <SelectContent>
         {showAll && (
-          <SelectItem value="__all">{allLabel}</SelectItem>
+          <SelectItem value="__all">{resolvedAllLabel}</SelectItem>
         )}
         {allowNone && (
-          <SelectItem value="__none">{noneLabel}</SelectItem>
+          <SelectItem value="__none">{resolvedNoneLabel}</SelectItem>
         )}
         {polies.length === 0 ? (
           <SelectItem value="__empty" disabled>
-            Tidak ada poli
+            {t("states.noData")}
           </SelectItem>
         ) : (
           polies.map((poly) => (

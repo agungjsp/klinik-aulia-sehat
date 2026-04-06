@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { Search, User, Loader2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { usePatientList, useDebouncedValue } from "@/hooks"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -18,10 +19,13 @@ export function PatientAutocomplete({
   value,
   onChange,
   onPatientSelect,
-  placeholder = "Cari atau ketik nama pasien...",
+  placeholder,
   disabled = false,
   className,
 }: PatientAutocompleteProps) {
+  const { t } = useTranslation(["common"])
+  const resolvedPlaceholder = placeholder ?? `${t("actions.search")} ${t("labels.patient").toLowerCase()}...`
+
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -35,7 +39,7 @@ export function PatientAutocomplete({
     debouncedSearch.length >= 2 ? { search: debouncedSearch, per_page: 10 } : undefined
   )
 
-  const patients = patientData?.data?.data || []
+  const patients = patientData?.items || []
 
   // Sync external value changes
   useEffect(() => {
@@ -106,7 +110,7 @@ export function PatientAutocomplete({
           onChange={handleInputChange}
           onFocus={handleFocus}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           disabled={disabled}
           className={cn("pl-9", className)}
           autoComplete="off"
@@ -124,7 +128,7 @@ export function PatientAutocomplete({
           {isLoading ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Mencari...</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t("states.loading")}</span>
             </div>
           ) : patients.length > 0 ? (
             <ul className="max-h-60 overflow-auto py-1">
@@ -159,7 +163,7 @@ export function PatientAutocomplete({
             </ul>
           ) : (
             <div className="py-3 px-3 text-center text-sm text-muted-foreground">
-              Tidak ditemukan. Lanjutkan mengisi data baru.
+              {t("states.noData")}
             </div>
           )}
         </div>

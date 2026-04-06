@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios"
 import type { ApiResponse, PaginatedDataResponse, Patient } from "@/types"
+import type { TableQueryParams } from "@/services/types/query"
 
 // ============================================
 // REQUEST INTERFACES
@@ -23,15 +24,15 @@ export interface PatientUpdateRequest {
 export interface PatientSearchParams {
   search?: string
   nik?: string
-  page?: number
-  per_page?: number
 }
+
+type PatientTableParams = PatientSearchParams & TableQueryParams
 
 // ============================================
 // PATIENT SERVICE
 // ============================================
 export const patientService = {
-  getAll: async (params?: PatientSearchParams): Promise<PaginatedDataResponse<Patient>> => {
+  getAll: async (params?: PatientTableParams): Promise<PaginatedDataResponse<Patient>> => {
     const response = await api.get<PaginatedDataResponse<Patient>>("/api/patients", { params })
     return response.data
   },

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import {
@@ -12,6 +13,7 @@ import {
   useReminderConfigDelete,
   useMessageTemplateList,
 } from "@/hooks"
+import { DataTable, DataTableActions, DataTablePagination } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,17 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PaginationControls } from "@/components/ui/pagination-controls"
 import {
   Select,
   SelectContent,
@@ -40,27 +32,27 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { ReminderConfig } from "@/types"
+import type { DataTableColumn, ReminderConfig } from "@/types"
 
 export const Route = createFileRoute("/pengaturan/konfigurasi-pengingat")({
   component: ReminderConfigPage,
 })
 
-const reminderConfigSchema = z.object({
-  message_template_id: z.number().min(1, "Template pesan wajib dipilih"),
-  reminder_offset: z.number().min(0, "Offset pengingat wajib diisi"),
-  reminder_patient_count: z.number().min(1, "Jumlah pasien wajib diisi"),
-  reminder_type: z.string().min(1, "Tipe pengingat wajib diisi"),
-})
-
-type ReminderConfigForm = z.infer<typeof reminderConfigSchema>
+type ReminderConfigForm = {
+  message_template_id: number
+  reminder_offset: number
+  reminder_patient_count: number
+  reminder_type: string
+}
 
 function ReminderConfigPage() {
+  const { t } = useTranslation(["reminderConfig", "common"])
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingConfig, setEditingConfig] = useState<ReminderConfig | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [submitPayload, setSubmitPayload] = useState<ReminderConfigForm | null>(null)
 
   const { data: configsData, isLoading } = useReminderConfigList({
     page,
@@ -83,7 +75,14 @@ function ReminderConfigPage() {
     watch,
     formState: { errors },
   } = useForm<ReminderConfigForm>({
-    resolver: zodResolver(reminderConfigSchema),
+    resolver: zodResolver(
+      z.object({
+        message_template_id: z.number().min(1, t("reminderConfig:validation.messageTemplateRequired")),
+        reminder_offset: z.number().min(0, t("reminderConfig:validation.offsetRequired")),
+        reminder_patient_count: z.number().min(1, t("reminderConfig:validation.patientCountRequired")),
+        reminder_type: z.string().min(1, t("reminderConfig:validation.typeRequired")),
+      }),
+    ),
     defaultValues: {
       message_template_id: 0,
       reminder_offset: 0,
@@ -92,7 +91,7 @@ function ReminderConfigPage() {
     },
   })
 
-  const templates = templatesData?.data.data || []
+  const templates = templatesData?.items || []
 
   const openCreateForm = () => {
     setEditingConfig(null)
@@ -116,19 +115,25 @@ function ReminderConfigPage() {
     setIsFormOpen(true)
   }
 
-  const onSubmit = async (formData: ReminderConfigForm) => {
+  const requestSubmit = (formData: ReminderConfigForm) => {
+    setSubmitPayload(formData)
+  }
+
+  const confirmSubmit = async () => {
+    if (!submitPayload) return
     try {
       if (editingConfig) {
         await updateMutation.mutateAsync({
           id: editingConfig.id,
-          data: formData,
+          data: submitPayload,
         })
-        toast.success("Konfigurasi pengingat berhasil diperbarui")
+        toast.success(t("reminderConfig:toasts.updated"))
       } else {
-        await createMutation.mutateAsync(formData)
-        toast.success("Konfigurasi pengingat berhasil ditambahkan")
+        await createMutation.mutateAsync(submitPayload)
+        toast.success(t("reminderConfig:toasts.added"))
       }
       setIsFormOpen(false)
+      setSubmitPayload(null)
       reset()
     } catch (error) {
       toast.error(getApiErrorMessage(error))
@@ -139,93 +144,103 @@ function ReminderConfigPage() {
     if (!deleteId) return
     try {
       await deleteMutation.mutateAsync(deleteId)
-      toast.success("Konfigurasi pengingat berhasil dihapus")
+      toast.success(t("reminderConfig:toasts.deleted"))
       setDeleteId(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     }
   }
 
-  const configs = configsData?.data.data || []
-  const pagination = configsData?.data
+  const configs = configsData?.items || []
+  const pagination = configsData?.meta
+  const columns: DataTableColumn<ReminderConfig>[] = [
+    {
+      id: "message_template",
+      header: t("reminderConfig:table.messageTemplate"),
+      cell: (config) => <span className="font-medium">{config.message_template?.template_name || "-"}</span>,
+      widthClassName: "min-w-[220px]",
+    },
+    {
+      id: "reminder_offset",
+      header: t("reminderConfig:table.offsetMinutes"),
+      align: "right",
+      cell: (config) => config.reminder_offset,
+      widthClassName: "w-36",
+    },
+    {
+      id: "reminder_patient_count",
+      header: t("reminderConfig:table.patientCount"),
+      align: "right",
+      cell: (config) => config.reminder_patient_count,
+      widthClassName: "w-36",
+    },
+    {
+      id: "reminder_type",
+      header: t("reminderConfig:table.type"),
+      cell: (config) =>
+        config.reminder_type === "QUEUE"
+          ? t("reminderConfig:tabs.queue")
+          : config.reminder_type === "SCHEDULE"
+            ? t("reminderConfig:tabs.schedule")
+            : config.reminder_type,
+      widthClassName: "w-36",
+    },
+    {
+      id: "actions",
+      header: t("reminderConfig:table.actions"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (config) => (
+        <DataTableActions>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEditForm(config)}
+            aria-label={t("reminderConfig:table.editAria", { id: config.id })}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteId(config.id)}
+            aria-label={t("reminderConfig:table.deleteAria", { id: config.id })}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </DataTableActions>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Konfigurasi Pengingat</h1>
+        <h1 className="text-2xl font-bold">{t("reminderConfig:page.title")}</h1>
         <Button onClick={openCreateForm}>
           <Plus className="mr-2 h-4 w-4" />
-          Tambah Konfigurasi
+          {t("reminderConfig:page.addConfig")}
         </Button>
       </div>
 
-      <Table variant="comfortable">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Template Pesan</TableHead>
-              <TableHead>Offset (menit)</TableHead>
-              <TableHead>Jumlah Pasien</TableHead>
-              <TableHead>Tipe</TableHead>
-              <TableHead className="w-[100px]">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-[80px]" /></TableCell>
-                </TableRow>
-              ))
-            ) : configs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  Tidak ada data
-                </TableCell>
-              </TableRow>
-            ) : (
-              configs.map((config) => (
-                <TableRow key={config.id}>
-                  <TableCell className="font-medium">
-                    {config.message_template?.template_name || "-"}
-                  </TableCell>
-                  <TableCell>{config.reminder_offset}</TableCell>
-                  <TableCell>{config.reminder_patient_count}</TableCell>
-                  <TableCell>{config.reminder_type}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditForm(config)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(config.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        rows={configs}
+        rowKey={(config) => config.id}
+        loading={isLoading}
+        loadingRowCount={5}
+        emptyMessage={t("reminderConfig:table.empty")}
+        variant="comfortable"
+      />
 
       {pagination && (
-        <PaginationControls
-          currentPage={page}
-          perPage={perPage}
-          totalPages={pagination.last_page}
+        <DataTablePagination
+          meta={pagination}
           onPageChange={setPage}
-          onPerPageChange={setPerPage}
+          onPerPageChange={(nextPerPage) => {
+            setPerPage(nextPerPage)
+            setPage(1)
+          }}
         />
       )}
 
@@ -233,18 +248,18 @@ function ReminderConfigPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingConfig ? "Edit Konfigurasi" : "Tambah Konfigurasi"}
+              {editingConfig ? t("reminderConfig:form.editTitle") : t("reminderConfig:form.addTitle")}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(requestSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="message_template_id">Template Pesan</Label>
+              <Label htmlFor="message_template_id">{t("reminderConfig:form.messageTemplate")}</Label>
               <Select
                 value={watch("message_template_id")?.toString() || ""}
                 onValueChange={(value) => setValue("message_template_id", parseInt(value))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih template pesan" />
+                  <SelectValue placeholder={t("reminderConfig:form.messageTemplatePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {templates.map((template) => (
@@ -260,12 +275,12 @@ function ReminderConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reminder_offset">Offset Pengingat (menit)</Label>
+              <Label htmlFor="reminder_offset">{t("reminderConfig:form.reminderOffset")}</Label>
               <Input
                 id="reminder_offset"
                 type="number"
                 {...register("reminder_offset", { valueAsNumber: true })}
-                placeholder="Masukkan offset dalam menit"
+                placeholder={t("reminderConfig:form.reminderOffsetPlaceholder")}
               />
               {errors.reminder_offset && (
                 <p className="text-sm text-destructive">{errors.reminder_offset.message}</p>
@@ -273,12 +288,12 @@ function ReminderConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reminder_patient_count">Jumlah Pasien</Label>
+              <Label htmlFor="reminder_patient_count">{t("reminderConfig:form.patientCount")}</Label>
               <Input
                 id="reminder_patient_count"
                 type="number"
                 {...register("reminder_patient_count", { valueAsNumber: true })}
-                placeholder="Masukkan jumlah pasien"
+                placeholder={t("reminderConfig:form.patientCountPlaceholder")}
               />
               {errors.reminder_patient_count && (
                 <p className="text-sm text-destructive">{errors.reminder_patient_count.message}</p>
@@ -286,17 +301,17 @@ function ReminderConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reminder_type">Tipe Pengingat</Label>
+              <Label htmlFor="reminder_type">{t("reminderConfig:form.reminderType")}</Label>
               <Select
                 value={watch("reminder_type") || "QUEUE"}
                 onValueChange={(value) => setValue("reminder_type", value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih tipe pengingat" />
+                  <SelectValue placeholder={t("reminderConfig:form.reminderTypePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="QUEUE">Antrean</SelectItem>
-                  <SelectItem value="SCHEDULE">Jadwal</SelectItem>
+                  <SelectItem value="QUEUE">{t("reminderConfig:tabs.queue")}</SelectItem>
+                  <SelectItem value="SCHEDULE">{t("reminderConfig:tabs.schedule")}</SelectItem>
                 </SelectContent>
               </Select>
               {errors.reminder_type && (
@@ -310,13 +325,13 @@ function ReminderConfigPage() {
                 variant="outline"
                 onClick={() => setIsFormOpen(false)}
               >
-                Batal
+                {t("common:actions.cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {editingConfig ? "Simpan" : "Tambah"}
+                {editingConfig ? t("common:actions.save") : t("reminderConfig:form.add")}
               </Button>
             </div>
           </form>
@@ -326,9 +341,39 @@ function ReminderConfigPage() {
       <ConfirmDialog
         open={deleteId !== null}
         onOpenChange={() => setDeleteId(null)}
-        title="Hapus Konfigurasi"
-        description="Apakah Anda yakin ingin menghapus konfigurasi ini?"
+        title={t("reminderConfig:confirmDelete.title")}
+        description={t("reminderConfig:confirmDelete.description")}
+        entityName={String(deleteId ?? "") || undefined}
+        impactItems={[
+          t("reminderConfig:confirmDelete.impact1"),
+          t("reminderConfig:confirmDelete.impact2"),
+        ]}
+        recoveryHint={t("reminderConfig:confirmDelete.recoveryHint")}
+        variant="destructive"
         onConfirm={handleDelete}
+        confirmText={t("common:actions.delete")}
+      />
+
+      <ConfirmDialog
+        open={submitPayload !== null}
+        onOpenChange={(open) => {
+          if (!open) setSubmitPayload(null)
+        }}
+        title={editingConfig ? t("reminderConfig:confirmSubmit.editTitle") : t("reminderConfig:confirmSubmit.addTitle")}
+        description={
+          editingConfig
+            ? t("reminderConfig:confirmSubmit.editDescription")
+            : t("reminderConfig:confirmSubmit.addDescription")
+        }
+        entityName={
+          templates.find((template) => template.id === submitPayload?.message_template_id)?.template_name
+        }
+        impactItems={[
+          t("reminderConfig:confirmSubmit.impact1"),
+          t("reminderConfig:confirmSubmit.impact2"),
+        ]}
+        onConfirm={confirmSubmit}
+        confirmText={editingConfig ? t("common:actions.save") : t("reminderConfig:form.add")}
       />
     </div>
   )

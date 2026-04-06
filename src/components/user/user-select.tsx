@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { User } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { useUserList } from "@/hooks"
 import {
   Select,
@@ -29,14 +30,18 @@ interface UserSelectProps {
 export function UserSelect({
   value,
   onChange,
-  placeholder = "Pilih user",
+  placeholder,
   disabled = false,
   className,
   showIcon = true,
   showAll = false,
-  allLabel = "Semua User",
+  allLabel,
   roleFilter,
 }: UserSelectProps) {
+  const { t } = useTranslation(["common"])
+  const resolvedPlaceholder = placeholder ?? t("labels.name")
+  const resolvedAllLabel = allLabel ?? t("actions.all")
+
   const { data: usersData, isLoading } = useUserList({ per_page: 1000 })
 
   const users = useMemo(() => {
@@ -75,16 +80,16 @@ export function UserSelect({
       <SelectTrigger className={cn("w-full", className)}>
         <div className="flex items-center gap-2">
           {showIcon && <User className="h-4 w-4 text-muted-foreground" />}
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={resolvedPlaceholder} />
         </div>
       </SelectTrigger>
       <SelectContent>
         {showAll && (
-          <SelectItem value="__all">{allLabel}</SelectItem>
+          <SelectItem value="__all">{resolvedAllLabel}</SelectItem>
         )}
         {users.length === 0 ? (
           <SelectItem value="__empty" disabled>
-            Tidak ada user
+            {t("states.noData")}
           </SelectItem>
         ) : (
           users.map((user) => (

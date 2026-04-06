@@ -3,9 +3,9 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { id } from "date-fns/locale"
 import { Plus, Pencil, Trash2, RotateCcw, Search } from "lucide-react"
 import {
   usePolyList,
@@ -16,6 +16,7 @@ import {
   usePolyRestore,
   useDebouncedValue,
 } from "@/hooks"
+import { DataTable, DataTableActions } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,31 +26,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { Poly } from "@/types"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
+import type { DataTableColumn, Poly } from "@/types"
 
 export const Route = createFileRoute("/master/poli")({
   component: PoliPage,
 })
 
-const polySchema = z.object({
-  name: z.string().min(1, "Nama poli wajib diisi"),
-})
-
-type PolyForm = z.infer<typeof polySchema>
+type PolyForm = {
+  name: string
+}
 
 function PoliPage() {
+  const { t, i18n } = useTranslation(["master", "common"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
+  const polySchema = z.object({
+    name: z.string().min(1, t("master:poly.validation.nameRequired")),
+  })
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebouncedValue(search, 500)
   const [activeTab, setActiveTab] = useState<"active" | "trashed">("active")
@@ -91,10 +87,10 @@ function PoliPage() {
     try {
       if (editingPoly) {
         await updateMutation.mutateAsync({ id: editingPoly.id, data })
-        toast.success("Poli berhasil diupdate")
+        toast.success(t("master:poly.toasts.updated"))
       } else {
         await createMutation.mutateAsync(data)
-        toast.success("Poli berhasil ditambahkan")
+        toast.success(t("master:poly.toasts.added"))
       }
       setIsFormOpen(false)
       reset()
@@ -107,7 +103,7 @@ function PoliPage() {
     if (!deleteId) return
     try {
       await deleteMutation.mutateAsync(deleteId)
-      toast.success("Poli berhasil dihapus")
+      toast.success(t("master:poly.toasts.deleted"))
       setDeleteId(null)
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -118,7 +114,7 @@ function PoliPage() {
     if (!restoreId) return
     try {
       await restoreMutation.mutateAsync(restoreId)
-      toast.success("Poli berhasil direstore")
+      toast.success(t("master:poly.toasts.restored"))
       setRestoreId(null)
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error))
@@ -127,17 +123,84 @@ function PoliPage() {
 
   const activePoli = polyData?.data || []
   const trashedPoli = trashedData?.data || []
+  const currentPoli = activeTab === "active" ? activePoli : trashedPoli
+  const isCurrentLoading = activeTab === "active" ? isLoading : isLoadingTrashed
+  const poliToDelete = activePoli.find((poly) => poly.id === deleteId)
+  const poliToRestore = trashedPoli.find((poly) => poly.id === restoreId)
+  const columns: DataTableColumn<Poly>[] = [
+    {
+      id: "id",
+      header: t("master:poly.table.id"),
+      cell: (poly) => <span className="font-mono text-sm">{poly.id}</span>,
+      widthClassName: "w-16",
+    },
+    {
+      id: "name",
+      header: t("master:poly.table.name"),
+      cell: (poly) => <span className="font-medium">{poly.name}</span>,
+      widthClassName: "min-w-[220px]",
+    },
+    {
+      id: "timestamp",
+      header: activeTab === "active" ? t("master:poly.table.created") : t("master:poly.table.deleted"),
+      cell: (poly) => (
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(activeTab === "active" ? poly.created_at : poly.deleted_at!), "dd MMM yyyy HH:mm", { locale: dateFnsLocale })}
+        </span>
+      ),
+      widthClassName: "w-48",
+    },
+    {
+      id: "actions",
+      header: t("master:poly.table.actions"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (poly) => (
+        <DataTableActions>
+          {activeTab === "active" ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openEditForm(poly)}
+                aria-label={t("master:poly.table.editAria", { name: poly.name })}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDeleteId(poly.id)}
+                aria-label={t("master:poly.table.deleteAria", { name: poly.name })}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRestoreId(poly.id)}
+              aria-label={t("master:poly.table.restoreAria", { name: poly.name })}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+        </DataTableActions>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Master Poli</h1>
-          <p className="text-muted-foreground">Kelola data poli klinik</p>
+          <h1 className="text-2xl font-bold">{t("master:poly.page.title")}</h1>
+          <p className="text-muted-foreground">{t("master:poly.page.description")}</p>
         </div>
         <Button onClick={openCreateForm}>
           <Plus className="mr-2 h-4 w-4" />
-          Tambah Poli
+          {t("master:poly.page.addPoly")}
         </Button>
       </div>
 
@@ -151,7 +214,7 @@ function PoliPage() {
           }`}
           onClick={() => setActiveTab("active")}
         >
-          Active ({activePoli.length})
+          {t("master:common.tabs.active")} ({activePoli.length})
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -161,7 +224,7 @@ function PoliPage() {
           }`}
           onClick={() => setActiveTab("trashed")}
         >
-          Trashed ({trashedPoli.length})
+          {t("master:common.tabs.trashed")} ({trashedPoli.length})
         </button>
       </div>
 
@@ -170,7 +233,7 @@ function PoliPage() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Cari poli..."
+            placeholder={t("master:poly.page.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -178,94 +241,30 @@ function PoliPage() {
         </div>
       )}
 
-      {/* Table */}
-      <Table variant="comfortable">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">ID</TableHead>
-              <TableHead>Nama</TableHead>
-              <TableHead className="w-48">
-                {activeTab === "active" ? "Dibuat" : "Dihapus"}
-              </TableHead>
-              <TableHead className="w-24 text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(activeTab === "active" ? isLoading : isLoadingTrashed) ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                </TableRow>
-              ))
-            ) : (activeTab === "active" ? activePoli : trashedPoli).length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  {activeTab === "active" ? "Tidak ada data poli" : "Tidak ada data terhapus"}
-                </TableCell>
-              </TableRow>
-            ) : (
-              (activeTab === "active" ? activePoli : trashedPoli).map((poly) => (
-                <TableRow key={poly.id}>
-                  <TableCell className="font-mono text-sm">{poly.id}</TableCell>
-                  <TableCell className="font-medium">{poly.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(
-                      new Date(activeTab === "active" ? poly.created_at : poly.deleted_at!),
-                      "dd MMM yyyy HH:mm",
-                      { locale: id }
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {activeTab === "active" ? (
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditForm(poly)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(poly.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setRestoreId(poly.id)}
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        rows={currentPoli}
+        rowKey={(poly) => poly.id}
+        loading={isCurrentLoading}
+        loadingRowCount={3}
+        emptyMessage={activeTab === "active" ? t("master:poly.page.emptyActive") : t("master:poly.page.emptyTrashed")}
+        variant="comfortable"
+      />
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingPoly ? "Edit Poli" : "Tambah Poli"}
+              {editingPoly ? t("master:poly.form.editTitle") : t("master:poly.form.addTitle")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Poli</Label>
+              <Label htmlFor="name">{t("master:poly.form.polyName")}</Label>
               <Input
                 id="name"
-                placeholder="Masukkan nama poli"
+                placeholder={t("master:poly.form.polyNamePlaceholder")}
                 {...register("name")}
                 aria-invalid={!!errors.name}
               />
@@ -279,7 +278,7 @@ function PoliPage() {
                 variant="outline"
                 onClick={() => setIsFormOpen(false)}
               >
-                Batal
+                {t("common:actions.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -288,7 +287,7 @@ function PoliPage() {
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <LoadingSpinner size="sm" className="mr-2" />
                 )}
-                {editingPoly ? "Update" : "Simpan"}
+                {editingPoly ? t("master:poly.form.submitUpdate") : t("common:actions.save")}
               </Button>
             </div>
           </form>
@@ -299,10 +298,16 @@ function PoliPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Hapus Poli"
-        description="Apakah Anda yakin ingin menghapus poli ini? Data dapat direstore dari tab Trashed."
+        title={t("master:poly.confirmDelete.title")}
+        description={t("master:poly.confirmDelete.description")}
+        entityName={poliToDelete?.name}
+        impactItems={[
+          t("master:poly.confirmDelete.impact1"),
+          t("master:poly.confirmDelete.impact2"),
+        ]}
+        recoveryHint={t("master:poly.confirmDelete.recoveryHint")}
         onConfirm={handleDelete}
-        confirmText="Hapus"
+        confirmText={t("common:actions.delete")}
         variant="destructive"
       />
 
@@ -310,10 +315,12 @@ function PoliPage() {
       <ConfirmDialog
         open={!!restoreId}
         onOpenChange={(open) => !open && setRestoreId(null)}
-        title="Restore Poli"
-        description="Apakah Anda yakin ingin merestore poli ini?"
+        title={t("master:poly.confirmRestore.title")}
+        description={t("master:poly.confirmRestore.description")}
+        entityName={poliToRestore?.name}
+        impactItems={[t("master:poly.confirmRestore.impact1")]}
         onConfirm={handleRestore}
-        confirmText="Restore"
+        confirmText={t("master:poly.confirmRestore.confirmText")}
       />
     </div>
   )

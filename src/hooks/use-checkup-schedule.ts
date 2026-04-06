@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { checkupScheduleService } from "@/services"
+import { normalizePaginatedResponse } from "@/services/adapters/pagination"
 import type { CheckupScheduleListParams, CheckupScheduleRequest } from "@/types"
 
 export const checkupScheduleKeys = {
@@ -12,6 +13,7 @@ export function useCheckupScheduleList(params?: CheckupScheduleListParams) {
   return useQuery({
     queryKey: checkupScheduleKeys.list(params),
     queryFn: () => checkupScheduleService.getAll(params),
+    select: (response) => normalizePaginatedResponse(response),
   })
 }
 

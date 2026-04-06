@@ -1,0 +1,75 @@
+const nurseQueueId = {
+  nurse: {
+    headerTitle: "Antrean Anamnesa",
+    sections: {
+      inAnamnesis: "Sedang Anamnesa",
+      waitingAnamnesis: "Menunggu Anamnesa",
+      patientCount: "{{count}} pasien",
+      noPatient: "Tidak ada pasien",
+      noWaitingPatient: "Tidak ada pasien menunggu",
+      finishedAt: "Daftar: {{time}}",
+    },
+    actions: {
+      callPatient: "Panggil",
+      finish: "Selesai",
+      waitUntilDone: "Tunggu pasien selesai",
+      queueOrder: "Antrean ke-{{order}}",
+    },
+    confirmations: {
+      callTitle: "Panggil Pasien",
+      callDescription: "Panggil pasien {{name}} ke ruang anamnesa?",
+      finishTitle: "Selesai Anamnesa",
+      finishDescription: "Selesaikan anamnesa untuk pasien {{name}} dan arahkan ke dokter?",
+    },
+    toasts: {
+      reservationDataUnavailable: "Data reservasi tidak tersedia.",
+      autoNoShow: "Pasien tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW",
+      calledForAnamnesis: "Pasien dipanggil untuk anamnesa",
+      movedToDoctorQueue: "Anamnesa selesai, pasien menunggu dokter",
+    },
+  },
+  nurseAssistant: {
+    headerTitle: "Panggil Pasien ke Dokter",
+    sections: {
+      withDoctor: "Sedang dengan Dokter",
+      waitingForDoctorCall: "Menunggu Dipanggil Dokter",
+      patientCount: "{{count}} pasien",
+      noPatient: "Tidak ada pasien",
+      noWaitingPatient: "Tidak ada pasien menunggu",
+    },
+    actions: {
+      noShow: "No Show",
+      recall: "Panggil Ulang",
+      call: "Panggil",
+      withDoctor: "Dengan Dokter",
+      waitUntilDone: "Tunggu pasien selesai",
+      queueOrder: "Antrean ke-{{order}}",
+      callCount: "Panggilan: {{count}}/3",
+      continue: "Lanjutkan",
+      markNoShow: "Tandai No Show",
+    },
+    confirmations: {
+      markNoShowTitle: "Tandai No Show",
+      markNoShowDescription: "Tandai pasien {{name}} sebagai tidak hadir?",
+      recallTitle: "Panggil Ulang Pasien",
+      recallDescription: "Lanjutkan panggilan untuk pasien {{name}}?",
+      callTitle: "Panggil Pasien",
+      callDescription: "Panggil pasien {{name}} ke ruang dokter?",
+      noShowImpact1: "Status pasien akan diubah menjadi NO SHOW.",
+      noShowImpact2: "Data antrean diperbarui secara realtime untuk tim terkait.",
+      callImpact1: "Pasien diproses ke tahap konsultasi berikutnya.",
+      callImpact2: "Riwayat jumlah panggilan akan diperbarui.",
+      noShowRecoveryHint: "Gunakan hanya jika pasien benar-benar tidak hadir.",
+      callRecoveryHint: "Pastikan pasien siap dipanggil sebelum melanjutkan.",
+    },
+    toasts: {
+      reservationDataUnavailable: "Data reservasi tidak tersedia.",
+      autoNoShow: "Pasien {{name}} tidak hadir setelah 3x panggilan, status diubah menjadi NO SHOW",
+      calledPatient: "Memanggil pasien {{name}}",
+      recallCount: "Panggilan ke-{{count}} untuk {{name}}",
+      markedNoShow: "Pasien ditandai tidak hadir",
+    },
+  },
+} as const
+
+export default nurseQueueId

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { reminderConfigService, type ReminderConfigListParams } from "@/services/reminder-config"
+import { normalizePaginatedResponse } from "@/services/adapters/pagination"
 import type { ReminderConfigRequest } from "@/types"
 
 export const reminderConfigKeys = {
@@ -12,6 +13,7 @@ export function useReminderConfigList(params?: ReminderConfigListParams) {
   return useQuery({
     queryKey: reminderConfigKeys.list(params),
     queryFn: () => reminderConfigService.getAll(params),
+    select: (response) => normalizePaginatedResponse(response),
   })
 }
 

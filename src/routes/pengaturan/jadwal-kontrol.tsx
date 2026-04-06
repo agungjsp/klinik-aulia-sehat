@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Plus, Pencil, Trash2, Search } from "lucide-react"
@@ -13,6 +14,7 @@ import {
   useCheckupScheduleDelete,
   useDebouncedValue,
 } from "@/hooks"
+import { DataTable, DataTableActions, DataTablePagination } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,38 +25,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PaginationControls } from "@/components/ui/pagination-controls"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { PatientAutocomplete } from "@/components/patient"
 import { PolySelect } from "@/components/poly"
 import { getApiErrorMessage } from "@/lib/api-error"
-import type { CheckupSchedule, Patient } from "@/types"
+import type { CheckupSchedule, DataTableColumn, Patient } from "@/types"
 
 export const Route = createFileRoute("/pengaturan/jadwal-kontrol")({
   component: CheckupSchedulePage,
 })
 
-const checkupScheduleSchema = z.object({
-  patient_id: z.number().min(1, "Pasien wajib dipilih"),
-  patient_name: z.string().min(1, "Nama pasien wajib diisi"),
-  poly_id: z.number().min(1, "Poli wajib dipilih"),
-  date: z.string().min(1, "Tanggal wajib diisi"),
-  description: z.string().optional(),
-})
-
-type CheckupScheduleForm = z.infer<typeof checkupScheduleSchema>
+type CheckupScheduleForm = {
+  patient_id: number
+  patient_name: string
+  poly_id: number
+  date: string
+  description?: string
+}
 
 function CheckupSchedulePage() {
+  const { t } = useTranslation(["checkupSchedule", "common"])
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebouncedValue(search, 300)
   const [page, setPage] = useState(1)
@@ -81,7 +72,15 @@ function CheckupSchedulePage() {
     control,
     formState: { errors },
   } = useForm<CheckupScheduleForm>({
-    resolver: zodResolver(checkupScheduleSchema),
+    resolver: zodResolver(
+      z.object({
+        patient_id: z.number().min(1, t("checkupSchedule:validation.patientRequired")),
+        patient_name: z.string().min(1, t("checkupSchedule:validation.patientNameRequired")),
+        poly_id: z.number().min(1, t("checkupSchedule:validation.polyRequired")),
+        date: z.string().min(1, t("checkupSchedule:validation.dateRequired")),
+        description: z.string().optional(),
+      }),
+    ),
     defaultValues: {
       patient_id: 0,
       patient_name: "",
@@ -137,10 +136,10 @@ function CheckupSchedulePage() {
           id: editingSchedule.id,
           data: payload,
         })
-        toast.success("Jadwal kontrol berhasil diperbarui")
+        toast.success(t("checkupSchedule:toasts.updated"))
       } else {
         await createMutation.mutateAsync(payload)
-        toast.success("Jadwal kontrol berhasil ditambahkan")
+        toast.success(t("checkupSchedule:toasts.added"))
       }
       setIsFormOpen(false)
       reset()
@@ -153,23 +152,76 @@ function CheckupSchedulePage() {
     if (!deleteId) return
     try {
       await deleteMutation.mutateAsync(deleteId)
-      toast.success("Jadwal kontrol berhasil dihapus")
+      toast.success(t("checkupSchedule:toasts.deleted"))
       setDeleteId(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     }
   }
 
-  const schedules = schedulesData?.data || []
+  const schedules = schedulesData?.items || []
   const pagination = schedulesData?.meta
+  const columns: DataTableColumn<CheckupSchedule>[] = [
+    {
+      id: "patient",
+      header: t("checkupSchedule:table.patient"),
+      cell: (schedule) => <span className="font-medium">{schedule.patient?.patient_name || "-"}</span>,
+      widthClassName: "min-w-[220px]",
+    },
+    {
+      id: "poly",
+      header: t("checkupSchedule:table.poly"),
+      cell: (schedule) => schedule.poly?.name || "-",
+      widthClassName: "min-w-[160px]",
+    },
+    {
+      id: "date",
+      header: t("checkupSchedule:table.date"),
+      cell: (schedule) => schedule.date,
+      widthClassName: "w-44",
+    },
+    {
+      id: "description",
+      header: t("checkupSchedule:table.description"),
+      cell: (schedule) => schedule.description,
+      widthClassName: "min-w-[260px]",
+      cellClassName: "min-w-0 max-w-md truncate",
+    },
+    {
+      id: "actions",
+      header: t("checkupSchedule:table.actions"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (schedule) => (
+        <DataTableActions>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEditForm(schedule)}
+            aria-label={t("checkupSchedule:table.editAria", { id: schedule.id })}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteId(schedule.id)}
+            aria-label={t("checkupSchedule:table.deleteAria", { id: schedule.id })}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </DataTableActions>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Jadwal Kontrol</h1>
+        <h1 className="text-2xl font-bold">{t("checkupSchedule:page.title")}</h1>
         <Button onClick={openCreateForm}>
           <Plus className="mr-2 h-4 w-4" />
-          Tambah Jadwal
+          {t("checkupSchedule:page.addSchedule")}
         </Button>
       </div>
 
@@ -177,7 +229,7 @@ function CheckupSchedulePage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Cari jadwal..."
+            placeholder={t("checkupSchedule:page.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -185,73 +237,24 @@ function CheckupSchedulePage() {
         </div>
       </div>
 
-      <Table variant="comfortable">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Pasien</TableHead>
-              <TableHead>Poli</TableHead>
-              <TableHead>Tanggal</TableHead>
-              <TableHead>Deskripsi</TableHead>
-              <TableHead className="w-[100px]">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-[80px]" /></TableCell>
-                </TableRow>
-              ))
-            ) : schedules.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  Tidak ada data
-                </TableCell>
-              </TableRow>
-            ) : (
-              schedules.map((schedule) => (
-                <TableRow key={schedule.id}>
-                  <TableCell className="font-medium">
-                    {schedule.patient?.patient_name || "-"}
-                  </TableCell>
-                  <TableCell>{schedule.poly?.name || "-"}</TableCell>
-                  <TableCell>{schedule.date}</TableCell>
-                  <TableCell className="max-w-md truncate">{schedule.description}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditForm(schedule)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(schedule.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        rows={schedules}
+        rowKey={(schedule) => schedule.id}
+        loading={isLoading}
+        loadingRowCount={5}
+        emptyMessage={t("checkupSchedule:table.empty")}
+        variant="comfortable"
+      />
 
       {pagination && (
-        <PaginationControls
-          currentPage={page}
-          perPage={perPage}
-          totalPages={pagination.last_page}
+        <DataTablePagination
+          meta={pagination}
           onPageChange={setPage}
-          onPerPageChange={setPerPage}
+          onPerPageChange={(nextPerPage) => {
+            setPerPage(nextPerPage)
+            setPage(1)
+          }}
         />
       )}
 
@@ -259,13 +262,13 @@ function CheckupSchedulePage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingSchedule ? "Edit Jadwal Kontrol" : "Tambah Jadwal Kontrol"}
+              {editingSchedule ? t("checkupSchedule:form.editTitle") : t("checkupSchedule:form.addTitle")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Patient Autocomplete */}
             <div className="space-y-2">
-              <Label>Nama Pasien</Label>
+              <Label>{t("checkupSchedule:form.patientName")}</Label>
               <Controller
                 name="patient_name"
                 control={control}
@@ -274,7 +277,7 @@ function CheckupSchedulePage() {
                     value={field.value || ""}
                     onChange={field.onChange}
                     onPatientSelect={handlePatientSelect}
-                    placeholder="Cari nama pasien..."
+                    placeholder={t("checkupSchedule:form.patientPlaceholder")}
                     disabled={!!editingSchedule}
                   />
                 )}
@@ -289,13 +292,13 @@ function CheckupSchedulePage() {
 
             {/* Poly Select */}
             <div className="space-y-2">
-              <Label>Poli</Label>
+              <Label>{t("checkupSchedule:form.poly")}</Label>
               <PolySelect
                 value={formPolyId || undefined}
                 onChange={(value) => {
                   if (value) setValue("poly_id", value)
                 }}
-                placeholder="Pilih poli tujuan"
+                placeholder={t("checkupSchedule:form.polyPlaceholder")}
               />
               {errors.poly_id && (
                 <p className="text-sm text-destructive">{errors.poly_id.message}</p>
@@ -304,7 +307,7 @@ function CheckupSchedulePage() {
 
             {/* Date */}
             <div className="space-y-2">
-              <Label htmlFor="date">Tanggal Kontrol</Label>
+              <Label htmlFor="date">{t("checkupSchedule:form.date")}</Label>
               <Controller
                 name="date"
                 control={control}
@@ -325,17 +328,17 @@ function CheckupSchedulePage() {
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Keterangan (opsional)</Label>
+              <Label htmlFor="description">{t("checkupSchedule:form.noteOptional")}</Label>
               <Controller
                 name="description"
                 control={control}
                 render={({ field }) => (
-                  <Textarea
-                    id="description"
-                    placeholder="Contoh: Kontrol tekanan darah, cek hasil lab, dll."
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                  />
+                    <Textarea
+                      id="description"
+                      placeholder={t("checkupSchedule:form.notePlaceholder")}
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
                 )}
               />
             </div>
@@ -346,7 +349,7 @@ function CheckupSchedulePage() {
                 variant="outline"
                 onClick={() => setIsFormOpen(false)}
               >
-                Batal
+                {t("common:actions.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -355,7 +358,7 @@ function CheckupSchedulePage() {
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <LoadingSpinner size="sm" className="mr-2" />
                 )}
-                {editingSchedule ? "Simpan" : "Tambah"}
+                {editingSchedule ? t("common:actions.save") : t("checkupSchedule:form.add")}
               </Button>
             </div>
           </form>
@@ -365,8 +368,8 @@ function CheckupSchedulePage() {
       <ConfirmDialog
         open={deleteId !== null}
         onOpenChange={() => setDeleteId(null)}
-        title="Hapus Jadwal"
-        description="Apakah Anda yakin ingin menghapus jadwal ini?"
+        title={t("checkupSchedule:confirmDelete.title")}
+        description={t("checkupSchedule:confirmDelete.description")}
         onConfirm={handleDelete}
       />
     </div>

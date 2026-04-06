@@ -1,0 +1,68 @@
+const scheduleEn = {
+  page: {
+    title: "Doctor Schedule",
+    description: "Manage doctor practice schedules",
+    addSchedule: "Add Schedule",
+    allDoctors: "All Doctors",
+    filterDoctor: "Filter doctor",
+  },
+  dayNames: {
+    sun: "Sun",
+    mon: "Mon",
+    tue: "Tue",
+    wed: "Wed",
+    thu: "Thu",
+    fri: "Fri",
+    sat: "Sat",
+  },
+  calendar: {
+    more: "+{{count}} more",
+    quota: "Quota: {{quota}}",
+    dentalPoly: "Dental Clinic",
+    noSchedule: "No schedule",
+  },
+  selectedDay: {
+    add: "Add",
+    quotaNotSet: "Quota not set",
+  },
+  form: {
+    addTitle: "Add Schedule",
+    editTitle: "Edit Schedule",
+    doctor: "Doctor",
+    selectDoctor: "Select doctor",
+    doctorHint: "Select doctor first so quota validation matches the service clinic.",
+    dentalRequiresQuota: "Dental Clinic requires quota",
+    date: "Date",
+    startTime: "Start Time",
+    endTime: "End Time",
+    patientQuota: "Patient Quota",
+    required: "Required",
+    optional: "Optional",
+    quotaRequiredPlaceholder: "Enter quota (required)",
+    quotaOptionalPlaceholder: "Unlimited quota",
+    quotaRequiredError: "Quota is required for Dental Clinic",
+    quotaHint: "If set, the system limits reservations for this schedule.",
+  },
+  confirmDelete: {
+    title: "Delete Schedule",
+    description: "Are you sure you want to delete this schedule?",
+    impact1: "This schedule slot can no longer be used for new reservations.",
+    impact2: "Existing reservations may require manual rescheduling if impacted.",
+    recoveryHint: "Make sure no patient still depends on this slot before deleting.",
+  },
+  toasts: {
+    quotaRequiredForDental: "Quota is required for Dental Clinic",
+    updated: "Schedule updated successfully",
+    added: "Schedule added successfully",
+    deleted: "Schedule deleted successfully",
+  },
+  validation: {
+    doctorRequired: "Select doctor",
+    dateRequired: "Date is required",
+    startTimeRequired: "Start time is required",
+    endTimeRequired: "End time is required",
+    endTimeGreater: "End time must be greater than start time",
+  },
+} as const
+
+export default scheduleEn

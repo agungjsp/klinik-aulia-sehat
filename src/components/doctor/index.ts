@@ -1,1 +1,1 @@
-export { DoctorSelect, useDoctorData } from "./doctor-select"
+export { DoctorSelect } from "./doctor-select"

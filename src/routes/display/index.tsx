@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { format } from "date-fns"
-import { id as localeId } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 import { useReservationList, useStatusList, usePolyList, useRealtimeQueueAll } from "@/hooks"
 import { Clock, Users, Calendar, Stethoscope, Syringe } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
 import type { Poly, Reservation, QueueStatusName } from "@/types"
 
 const EMPTY_RESERVATIONS: Reservation[] = []
@@ -50,6 +51,8 @@ export const Route = createFileRoute("/display/")({
 })
 
 function DisplayPage() {
+  const { t, i18n } = useTranslation(["common", "queue"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
   const today = format(new Date(), "yyyy-MM-dd")
   const { data: reservationData } = useReservationList({ date: today })
   const { data: statusData } = useStatusList()
@@ -64,19 +67,26 @@ function DisplayPage() {
   }, [])
 
   const reservations = reservationData?.data?.data ?? EMPTY_RESERVATIONS
-  const statuses = statusData?.data || []
-  const allPolies = polyData?.data || []
-
+  const statuses = useMemo(() => statusData?.data ?? [], [statusData?.data])
   // Filter to show only Poli Umum and Poli Gigi
   const targetPolies = useMemo(() => {
+    const allPolies = polyData?.data ?? []
     return allPolies.filter(
       (p) => p.name === "Poli Umum" || p.name === "Poli Gigi"
     )
-  }, [allPolies])
+  }, [polyData?.data])
 
-  const getStatusId = (statusName: QueueStatusName) => {
-    return statuses.find((s) => s.status_name === statusName)?.id
-  }
+  const statusIdMap = useMemo(() => {
+    return statuses.reduce<Record<string, number>>((acc, status) => {
+      acc[status.status_name] = status.id
+      return acc
+    }, {})
+  }, [statuses])
+
+  const getStatusId = useCallback(
+    (statusName: QueueStatusName) => statusIdMap[statusName],
+    [statusIdMap]
+  )
 
   const reservationsByPoly = useMemo(() => {
     const grouped = new Map<number, Reservation[]>()
@@ -92,17 +102,17 @@ function DisplayPage() {
 
   // Calculate total stats
   const totalWaiting = useMemo(() => {
-    const waitingId = getStatusId("WAITING")
-    const waitingDoctorId = getStatusId("WAITING_DOCTOR")
+    const waitingId = statusIdMap.WAITING
+    const waitingDoctorId = statusIdMap.WAITING_DOCTOR
     return reservations.filter(
       (r) => r.status_id === waitingId || r.status_id === waitingDoctorId
     ).length
-  }, [reservations, statuses])
+  }, [reservations, statusIdMap])
 
   const totalServed = useMemo(() => {
-    const doneId = getStatusId("DONE")
+    const doneId = statusIdMap.DONE
     return reservations.filter((r) => r.status_id === doneId).length
-  }, [reservations, statuses])
+  }, [reservations, statusIdMap])
 
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-950 overflow-hidden font-sans text-white">
@@ -127,10 +137,10 @@ function DisplayPage() {
           </div>
           <div>
             <h1 className="text-4xl font-black tracking-tight text-white">
-              KLINIK AULIA SEHAT
+              {t("common:appName").toUpperCase()}
             </h1>
             <p className="text-lg text-emerald-400 font-semibold tracking-wide mt-1">
-              Sistem Informasi Antrean
+              {t("common:systemName")}
             </p>
           </div>
         </div>
@@ -140,11 +150,11 @@ function DisplayPage() {
           <div className="flex items-center gap-6">
             <div className="text-center px-6 py-3 rounded-2xl bg-slate-800/50 border border-white/5">
               <p className="text-3xl font-black text-amber-400 tabular-nums">{totalWaiting}</p>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Menunggu</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("common:labels.waiting")}</p>
             </div>
             <div className="text-center px-6 py-3 rounded-2xl bg-slate-800/50 border border-white/5">
               <p className="text-3xl font-black text-emerald-400 tabular-nums">{totalServed}</p>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Selesai</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("common:labels.done")}</p>
             </div>
           </div>
 
@@ -152,12 +162,12 @@ function DisplayPage() {
           <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-lg font-semibold text-slate-300">
-                {format(currentTime, "EEEE", { locale: localeId })}
+                {format(currentTime, "EEEE", { locale: dateFnsLocale })}
               </p>
               <div className="flex items-center gap-2 text-white">
                 <Calendar className="h-5 w-5 text-emerald-400" />
                 <p className="text-xl font-bold">
-                  {format(currentTime, "d MMMM yyyy", { locale: localeId })}
+                  {format(currentTime, "d MMMM yyyy", { locale: dateFnsLocale })}
                 </p>
               </div>
             </div>
@@ -175,13 +185,13 @@ function DisplayPage() {
       </header>
 
       {/* Main Content - Two Polies Side by Side */}
-      <main className="relative z-10 flex-1 p-8 overflow-hidden">
-        <div className="h-full grid grid-cols-2 gap-8">
+      <main className="relative z-10 flex-1 px-6 py-7 xl:px-10 2xl:px-14 overflow-hidden">
+        <div className="h-full w-full max-w-[2400px] mx-auto grid grid-cols-2 gap-6 2xl:gap-8 3xl:gap-10">
           {targetPolies.length === 0 ? (
             <div className="col-span-2 flex items-center justify-center">
               <div className="text-center bg-slate-900/50 p-16 rounded-3xl border border-white/5">
                 <Users className="h-24 w-24 text-slate-600 mx-auto mb-6" />
-                <p className="text-4xl font-bold text-slate-500">Memuat Data Poli...</p>
+                <p className="text-4xl font-bold text-slate-500">{t("queue:labels.loadingPolies")}</p>
               </div>
             </div>
           ) : (
@@ -202,38 +212,38 @@ function DisplayPage() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
         <div className="flex w-full whitespace-nowrap">
           <div className="animate-marquee flex items-center gap-24 text-xl font-medium px-4 text-slate-300">
-            <span>🏥 Selamat Datang di Klinik Aulia Sehat</span>
+            <span>{`🏥 ${t("common:display.welcome")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>Mohon menunggu hingga nomor antrean Anda dipanggil</span>
+            <span>{t("common:display.waitingCall")}</span>
             <span className="text-slate-600">•</span>
-            <span>📞 Hotline: 0821-xxxx-xxxx</span>
+            <span>{`📞 ${t("common:display.hotline")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>🕐 Jam Operasional: Senin - Sabtu, 08.00 - 21.00 WIB</span>
+            <span>{`🕐 ${t("common:display.operationHours")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>🏥 Selamat Datang di Klinik Aulia Sehat</span>
+            <span>{`🏥 ${t("common:display.welcome")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>Mohon menunggu hingga nomor antrean Anda dipanggil</span>
+            <span>{t("common:display.waitingCall")}</span>
             <span className="text-slate-600">•</span>
-            <span>📞 Hotline: 0821-xxxx-xxxx</span>
+            <span>{`📞 ${t("common:display.hotline")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>🕐 Jam Operasional: Senin - Sabtu, 08.00 - 21.00 WIB</span>
+            <span>{`🕐 ${t("common:display.operationHours")}`}</span>
           </div>
           <div className="animate-marquee flex items-center gap-24 text-xl font-medium px-4 text-slate-300" aria-hidden="true">
-            <span>🏥 Selamat Datang di Klinik Aulia Sehat</span>
+            <span>{`🏥 ${t("common:display.welcome")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>Mohon menunggu hingga nomor antrean Anda dipanggil</span>
+            <span>{t("common:display.waitingCall")}</span>
             <span className="text-slate-600">•</span>
-            <span>📞 Hotline: 0821-xxxx-xxxx</span>
+            <span>{`📞 ${t("common:display.hotline")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>🕐 Jam Operasional: Senin - Sabtu, 08.00 - 21.00 WIB</span>
+            <span>{`🕐 ${t("common:display.operationHours")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>🏥 Selamat Datang di Klinik Aulia Sehat</span>
+            <span>{`🏥 ${t("common:display.welcome")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>Mohon menunggu hingga nomor antrean Anda dipanggil</span>
+            <span>{t("common:display.waitingCall")}</span>
             <span className="text-slate-600">•</span>
-            <span>📞 Hotline: 0821-xxxx-xxxx</span>
+            <span>{`📞 ${t("common:display.hotline")}`}</span>
             <span className="text-slate-600">•</span>
-            <span>🕐 Jam Operasional: Senin - Sabtu, 08.00 - 21.00 WIB</span>
+            <span>{`🕐 ${t("common:display.operationHours")}`}</span>
           </div>
         </div>
       </footer>
@@ -258,6 +268,7 @@ interface PolySectionProps {
 }
 
 function PolySection({ poly, reservations, getStatusId }: PolySectionProps) {
+  const { t } = useTranslation(["common", "queue"])
   const config = POLY_CONFIG[poly.name] || DEFAULT_CONFIG
   const IconComponent = config.icon
 
@@ -286,11 +297,11 @@ function PolySection({ poly, reservations, getStatusId }: PolySectionProps) {
     return String(num).padStart(3, "0")
   }
 
+  const cardShell = "rounded-2xl border border-slate-600/85 bg-slate-900/95"
+  const labelClass = "text-xs font-semibold uppercase tracking-[0.14em]"
+
   return (
-    <div className={cn(
-      "h-full flex flex-col rounded-3xl bg-slate-900/50 backdrop-blur-xl border border-white/10 overflow-hidden",
-      config.glow
-    )}>
+    <div className="h-full flex flex-col rounded-3xl border border-white/10 bg-slate-900/55 overflow-hidden w-full max-w-[1160px] mx-auto">
       {/* Poly Header */}
       <div className={cn(
         "flex items-center justify-between px-8 py-5 bg-gradient-to-r",
@@ -307,104 +318,84 @@ function PolySection({ poly, reservations, getStatusId }: PolySectionProps) {
         <div className="flex items-center gap-2 bg-black/20 px-5 py-2 rounded-full backdrop-blur-sm">
           <Users className="h-5 w-5 text-white/80" />
           <span className="text-xl font-bold text-white">{activeCount}</span>
-          <span className="text-white/60 font-medium">antrean</span>
+          <span className="text-white/60 font-medium">{t("queue:labels.queue")}</span>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 p-6 flex flex-col gap-5">
         {/* Currently Being Served - THE HERO */}
-        <div className="relative flex-1 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-white/10 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
-          
-          <div className="relative h-full p-6 flex flex-col">
+        <div className={cn(cardShell, "flex-1 p-7 grid grid-cols-[1fr_auto] items-center gap-8") }>
+          <div className="min-w-0">
             <div className="flex items-center gap-3 mb-4">
-              <span className="relative flex h-3 w-3">
-                <span className={cn(
-                  "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-                  inConsultation ? "bg-green-400" : "bg-slate-600"
-                )}></span>
-                <span className={cn(
-                  "relative inline-flex rounded-full h-3 w-3",
-                  inConsultation ? "bg-green-500" : "bg-slate-600"
-                )}></span>
-              </span>
-              <p className={cn(
-                "text-sm font-bold uppercase tracking-[0.2em]",
-                inConsultation ? config.accentLight : "text-slate-500"
-              )}>
-                Sedang Dilayani
+              <span
+                className={cn(
+                  "inline-flex h-3 w-3 rounded-full transition-colors duration-300 motion-reduce:transition-none",
+                  inConsultation ? "bg-emerald-400" : "bg-slate-600"
+                )}
+              />
+              <p className={cn(labelClass, inConsultation ? config.accentLight : "text-slate-500")}>
+                {t("queue:labels.activeService")}
               </p>
             </div>
-
-            <div className="flex-1 flex items-center justify-between">
-              <div className="flex-1">
-                {inConsultation ? (
-                  <>
-                    <p className="text-5xl font-black text-white leading-tight mb-2">
-                      {inConsultation.patient?.patient_name || "-"}
-                    </p>
-                    <p className="text-lg text-slate-400">
-                      Nomor Antrean
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-3xl font-medium text-slate-600 italic">
-                    Menunggu Pasien...
-                  </p>
-                )}
-              </div>
-              
-              <div className="text-right pl-8">
-                <p className="text-[160px] leading-none font-black tabular-nums tracking-tighter text-white drop-shadow-2xl">
-                  {formatQueueNumber(inConsultation?.queue?.queue_number)}
+            {inConsultation ? (
+              <>
+                <p className="text-[clamp(2.25rem,3.7vw,4.6rem)] font-black text-white leading-[1.02] break-words line-clamp-2">
+                  {inConsultation.patient?.patient_name || "-"}
                 </p>
-              </div>
-            </div>
+                <p className="mt-3 text-base font-medium uppercase tracking-[0.1em] text-slate-300">
+                  {t("queue:labels.activeQueueNumber")}
+                </p>
+              </>
+            ) : (
+              <p className="text-[clamp(1.9rem,2.8vw,3.2rem)] font-medium text-slate-500 italic">{t("queue:labels.waitingPatient")}</p>
+            )}
+          </div>
+
+          <div className="text-right pl-6 border-l border-slate-700/70">
+            <p className="text-[clamp(5.6rem,9.4vw,9.4rem)] leading-none font-black tabular-nums tracking-tight text-white">
+              {formatQueueNumber(inConsultation?.queue?.queue_number)}
+            </p>
           </div>
         </div>
 
-        {/* Preparation / Anamnesa */}
-        <div className="relative rounded-2xl bg-slate-800/40 border border-amber-500/20 p-5 flex items-center overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent" />
-          
-          <div className="relative flex-1 z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-              <p className="text-xs font-bold text-amber-300 uppercase tracking-widest">
-                Persiapan Pemeriksaan
-              </p>
+        {/* Anamnesa */}
+        <div className={cn(cardShell, "grid grid-cols-[1fr_auto] items-center p-5 border-amber-600/45 bg-amber-950/20") }>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-2.5 w-2.5 rounded-full bg-amber-300 transition-opacity duration-300 motion-reduce:transition-none" />
+              <p className={cn(labelClass, "text-amber-300/85")}>{t("queue:labels.inAnamnesis")}</p>
             </div>
             {inAnamnesa ? (
-              <p className="text-2xl font-bold text-white">
+              <p className="text-[clamp(1.75rem,2.6vw,2.8rem)] font-bold text-white truncate">
                 {inAnamnesa.patient?.patient_name || "-"}
               </p>
             ) : (
-              <p className="text-xl text-slate-500 italic">Kosong</p>
+              <p className="text-[clamp(1.4rem,2.1vw,2.2rem)] text-slate-500 italic">{t("common:states.empty")}</p>
             )}
           </div>
-          
-          <div className="relative z-10 text-right pl-6 border-l border-amber-500/20">
-            <p className="text-7xl font-black text-amber-400/90 tabular-nums tracking-tighter">
+
+          <div className="text-right pl-5 border-l border-amber-700/40">
+            <p className="text-[clamp(3.2rem,6vw,5.2rem)] leading-none font-black text-amber-200 tabular-nums tracking-tight">
               {formatQueueNumber(inAnamnesa?.queue?.queue_number)}
             </p>
           </div>
         </div>
 
         {/* Waiting Queue */}
-        <div className="rounded-2xl bg-slate-800/30 border border-white/5 p-5">
+        <div className={cn(cardShell, "p-4") }>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Users className="h-4 w-4" /> Antrean Menunggu
+            <p className={cn(labelClass, "text-slate-400 flex items-center gap-2") }>
+              <Users className="h-4 w-4" /> {t("queue:labels.waitingQueue")}
             </p>
-            <span className="text-xs font-medium text-slate-500 bg-slate-800 px-3 py-1 rounded-full">
-              {waitingQueue.length} pasien
+            <span className="text-sm font-semibold text-slate-200 bg-slate-800 px-3 py-1.5 rounded-md border border-slate-700/80 tabular-nums">
+              {t("queue:labels.queuedCount", { count: waitingQueue.length })}
             </span>
           </div>
           
           {waitingQueue.length === 0 ? (
-            <div className="py-6 text-center border border-dashed border-slate-700/50 rounded-xl">
-              <p className="text-lg text-slate-600 font-medium">Tidak ada antrean</p>
+            <div className="py-6 text-center border border-dashed border-slate-700/70 rounded-lg">
+              <p className="text-lg text-slate-500 font-medium">{t("queue:labels.noQueue")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-3">
@@ -412,26 +403,26 @@ function PolySection({ poly, reservations, getStatusId }: PolySectionProps) {
                 <div
                   key={r.id}
                   className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-xl border transition-all",
+                    "relative min-w-0 flex flex-col items-center justify-center px-2 py-4 rounded-lg border transition-colors duration-200 motion-reduce:transition-none",
                     i === 0
-                      ? "bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-500/30 ring-1 ring-amber-500/20"
-                      : "bg-slate-800/50 border-white/5"
+                      ? "bg-amber-900/35 border-amber-400/65"
+                      : "bg-slate-800/80 border-slate-700/95"
                   )}
                 >
                   {i === 0 && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-slate-900 px-2 py-0.5 rounded-full border border-amber-500/30">
-                      Selanjutnya
+                    <span className="absolute top-1 right-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-200">
+                      {t("queue:labels.next")}
                     </span>
                   )}
                   <span className={cn(
-                    "text-4xl font-black tabular-nums",
-                    i === 0 ? "text-amber-300" : "text-slate-400"
+                    "text-[clamp(2.2rem,3.2vw,3.2rem)] leading-none font-black tabular-nums",
+                    i === 0 ? "text-amber-100" : "text-slate-100"
                   )}>
                     {formatQueueNumber(r.queue?.queue_number)}
                   </span>
                   <span className={cn(
-                    "text-xs font-medium truncate max-w-full mt-1",
-                    i === 0 ? "text-amber-200/70" : "text-slate-500"
+                    "text-sm font-medium truncate max-w-full mt-1",
+                    i === 0 ? "text-amber-200/90" : "text-slate-300"
                   )}>
                     {r.patient?.patient_name?.split(" ")[0] || "-"}
                   </span>
@@ -442,7 +433,7 @@ function PolySection({ poly, reservations, getStatusId }: PolySectionProps) {
           
           {waitingQueue.length > 8 && (
             <p className="text-center text-sm text-slate-500 mt-4 font-medium">
-              +{waitingQueue.length - 8} pasien lainnya dalam antrean
+              {t("queue:labels.moreInQueue", { count: waitingQueue.length - 8 })}
             </p>
           )}
         </div>

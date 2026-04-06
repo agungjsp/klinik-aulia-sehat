@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { useRoleList } from "@/hooks"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -15,6 +16,7 @@ export function RoleCheckboxGroup({
   disabled = false,
   className,
 }: RoleCheckboxGroupProps) {
+  const { t } = useTranslation(["common"])
   const { data: roleData, isLoading } = useRoleList()
   const roles = roleData?.data || []
 
@@ -39,7 +41,7 @@ export function RoleCheckboxGroup({
   return (
     <div className={cn("flex flex-wrap gap-3", className)}>
       {roles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Tidak ada role</p>
+        <p className="text-sm text-muted-foreground">{t("states.noData")}</p>
       ) : (
         roles.map((role) => (
           <label
