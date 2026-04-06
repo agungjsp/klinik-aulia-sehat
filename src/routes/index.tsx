@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState, useMemo } from "react"
 import { format } from "date-fns"
-import { id as localeId } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 import {
   useDashboardSummary,
   useDashboardReservationTrend,
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, Calendar, CheckCircle, XCircle, Clock, Activity } from "lucide-react"
 import { cn, sortPoliesWithUmumFirst } from "@/lib/utils"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
 import type { Poly, DashboardTrendItem, DashboardSummaryItem, DashboardReservationsByPolyItem, DashboardPatientAttendance, DashboardAverageWaitingTimeItem, DashboardPeakHourItem, DashboardBpjsVsGeneralItem } from "@/types"
 import {
   Area,
@@ -86,6 +87,8 @@ function processTrendData(
 }
 
 function DashboardPage() {
+  const { t, i18n } = useTranslation(["common", "dashboard"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
   const today = format(new Date(), "yyyy-MM-dd")
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth() + 1
@@ -151,20 +154,16 @@ function DashboardPage() {
   }
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
-  const months = [
-    { value: 1, label: "Januari" },
-    { value: 2, label: "Februari" },
-    { value: 3, label: "Maret" },
-    { value: 4, label: "April" },
-    { value: 5, label: "Mei" },
-    { value: 6, label: "Juni" },
-    { value: 7, label: "Juli" },
-    { value: 8, label: "Agustus" },
-    { value: 9, label: "September" },
-    { value: 10, label: "Oktober" },
-    { value: 11, label: "November" },
-    { value: 12, label: "Desember" },
-  ]
+  const months = useMemo(
+    () => Array.from({ length: 12 }, (_, index) => {
+      const monthDate = new Date(2026, index, 1)
+      return {
+        value: index + 1,
+        label: format(monthDate, "MMMM", { locale: dateFnsLocale }),
+      }
+    }),
+    [dateFnsLocale]
+  )
 
   const selectedMonthLabel = selectedMonth
     ? months.find((m) => m.value === selectedMonth)?.label
@@ -174,9 +173,9 @@ function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">{t("dashboard:page.title")}</h1>
           <p className="text-muted-foreground">
-            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
+            {format(new Date(), "EEEE, d MMMM yyyy", { locale: dateFnsLocale })}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -188,11 +187,11 @@ function DashboardPage() {
               {polyLoading ? (
                 <Skeleton className="h-4 w-20" />
               ) : (
-                <SelectValue placeholder="Semua Poli" />
+                <SelectValue placeholder={t("actions.all")} />
               )}
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Poli</SelectItem>
+              <SelectItem value="all">{t("actions.all")}</SelectItem>
               {polies.map((poly) => (
                 <SelectItem key={poly.id} value={String(poly.id)}>
                   {poly.name}
@@ -220,10 +219,10 @@ function DashboardPage() {
             onValueChange={(v) => setSelectedMonth(v === "all" ? undefined : Number(v))}
           >
             <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Semua Bulan" />
+              <SelectValue placeholder={t("actions.all")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Bulan</SelectItem>
+              <SelectItem value="all">{t("actions.all")}</SelectItem>
               {months.map((month) => (
                 <SelectItem key={month.value} value={String(month.value)}>
                   {month.label}
@@ -237,28 +236,28 @@ function DashboardPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryCard
-          title="Total Antrean"
+          title={t("dashboard:summary.totalQueue")}
           value={getSummaryValue("total")}
           icon={Users}
           color="blue"
           isLoading={summaryLoading}
         />
         <SummaryCard
-          title="Total Pasien"
+          title={t("dashboard:summary.totalPatients")}
           value={getSummaryValue("patient") || getSummaryValue("pasien")}
           icon={Calendar}
           color="purple"
           isLoading={summaryLoading}
         />
         <SummaryCard
-          title="Selesai"
+          title={t("dashboard:summary.completed")}
           value={getSummaryValue("completed") || getSummaryValue("selesai")}
           icon={CheckCircle}
           color="green"
           isLoading={summaryLoading}
         />
         <SummaryCard
-          title="Tidak Hadir"
+          title={t("dashboard:summary.noShow")}
           value={getSummaryValue("no_show") || getSummaryValue("tidak")}
           icon={XCircle}
           color="gray"
@@ -271,11 +270,11 @@ function DashboardPage() {
         {/* Reservation Trend - Improved */}
         <Card>
           <CardHeader>
-            <CardTitle>Tren Reservasi</CardTitle>
+            <CardTitle>{t("dashboard:trend.title")}</CardTitle>
             <CardDescription>
               {selectedMonthLabel
-                ? `Jumlah reservasi harian bulan ${selectedMonthLabel} ${selectedYear}`
-                : `Jumlah reservasi bulanan tahun ${selectedYear}`}
+                ? t("dashboard:trend.monthlyDescription", { month: selectedMonthLabel, year: selectedYear })
+                : t("dashboard:trend.yearlyDescription", { year: selectedYear })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -285,11 +284,11 @@ function DashboardPage() {
               </div>
             ) : processedTrend.length === 0 ? (
               <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground">
-                <p>Tidak ada data reservasi</p>
+                <p>{t("dashboard:trend.emptyTitle")}</p>
                 <p className="text-sm mt-1">
                   {selectedMonthLabel
-                    ? `untuk bulan ${selectedMonthLabel} ${selectedYear}`
-                    : `untuk tahun ${selectedYear}`}
+                    ? t("dashboard:trend.emptyMonth", { month: selectedMonthLabel, year: selectedYear })
+                    : t("dashboard:trend.emptyYear", { year: selectedYear })}
                 </p>
               </div>
             ) : (
@@ -328,7 +327,7 @@ function DashboardPage() {
                                   {label}
                                 </span>
                                 <span className="font-bold text-lg text-blue-600">
-                                  {data.value} Reservasi
+                                  {t("dashboard:trend.tooltipCount", { count: data.value })}
                                 </span>
                               </div>
                               {data.breakdown && data.breakdown.length > 0 && (
@@ -341,7 +340,7 @@ function DashboardPage() {
                                   ))}
                                   {data.breakdown.length > 5 && (
                                     <div className="text-[10px] text-muted-foreground text-center pt-1">
-                                      + {data.breakdown.length - 5} lainnya
+                                      {t("dashboard:trend.tooltipMore", { count: data.breakdown.length - 5 })}
                                     </div>
                                   )}
                                 </div>
@@ -370,8 +369,8 @@ function DashboardPage() {
         {/* Reservations by Poly */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribusi per Poli</CardTitle>
-            <CardDescription>Jumlah reservasi per poli</CardDescription>
+            <CardTitle>{t("dashboard:byPoly.title")}</CardTitle>
+            <CardDescription>{t("dashboard:byPoly.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             {polyDistLoading ? (
@@ -380,7 +379,7 @@ function DashboardPage() {
                </div>
             ) : polyDist.length === 0 ? (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Tidak ada data
+                {t("dashboard:byPoly.empty")}
               </div>
             ) : (
               <div className="h-[300px] w-full">
@@ -413,7 +412,7 @@ function DashboardPage() {
                                   {label}
                                 </span>
                                 <span className="font-bold">
-                                  {payload[0].value} Reservasi
+                                  {t("dashboard:byPoly.tooltipCount", { count: payload[0].value })}
                                 </span>
                               </div>
                             </div>
@@ -440,8 +439,8 @@ function DashboardPage() {
         {/* Patient Attendance */}
         <Card>
           <CardHeader>
-            <CardTitle>Kehadiran Pasien</CardTitle>
-            <CardDescription>Rasio kehadiran</CardDescription>
+            <CardTitle>{t("dashboard:attendance.title")}</CardTitle>
+            <CardDescription>{t("dashboard:attendance.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             {attendanceLoading ? (
@@ -456,7 +455,7 @@ function DashboardPage() {
               </div>
             ) : !attendance ? (
               <div className="h-40 flex items-center justify-center text-muted-foreground">
-                Tidak ada data
+                {t("dashboard:attendance.empty")}
               </div>
             ) : (
               <div className="space-y-4">
@@ -464,20 +463,20 @@ function DashboardPage() {
                   <p className="text-4xl font-bold text-green-600">
                     {(attendance as DashboardPatientAttendance).summary.attendance_rate.toFixed(1)}%
                   </p>
-                  <p className="text-sm text-muted-foreground">Tingkat Kehadiran</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard:attendance.rate")}</p>
                 </div>
                 <div className="flex justify-between text-sm">
                   <div className="text-center">
                     <p className="font-medium text-green-600">{(attendance as DashboardPatientAttendance).summary.attended}</p>
-                    <p className="text-muted-foreground">Hadir</p>
+                    <p className="text-muted-foreground">{t("dashboard:attendance.attended")}</p>
                   </div>
                   <div className="text-center">
                     <p className="font-medium text-red-600">{(attendance as DashboardPatientAttendance).summary.not_attended}</p>
-                    <p className="text-muted-foreground">Tidak Hadir</p>
+                    <p className="text-muted-foreground">{t("dashboard:attendance.notAttended")}</p>
                   </div>
                   <div className="text-center">
                     <p className="font-medium">{(attendance as DashboardPatientAttendance).summary.total}</p>
-                    <p className="text-muted-foreground">Total</p>
+                    <p className="text-muted-foreground">{t("dashboard:attendance.total")}</p>
                   </div>
                 </div>
               </div>
@@ -490,9 +489,9 @@ function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Waktu Tunggu Rata-rata
+              {t("dashboard:waitingTime.title")}
             </CardTitle>
-            <CardDescription>Per poli</CardDescription>
+            <CardDescription>{t("dashboard:waitingTime.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             {waitingTimeLoading ? (
@@ -503,7 +502,7 @@ function DashboardPage() {
               </div>
             ) : waitingTime.length === 0 ? (
               <div className="h-40 flex items-center justify-center text-muted-foreground">
-                Tidak ada data
+                {t("dashboard:waitingTime.empty")}
               </div>
             ) : (
               <div className="h-40 space-y-2 overflow-y-auto">
@@ -523,9 +522,9 @@ function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Jam Sibuk
+              {t("dashboard:peakHours.title")}
             </CardTitle>
-            <CardDescription>Hari ini</CardDescription>
+            <CardDescription>{t("dashboard:peakHours.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             {peakHoursLoading ? (
@@ -534,7 +533,7 @@ function DashboardPage() {
               </div>
             ) : peakHours.length === 0 ? (
               <div className="h-40 flex items-center justify-center text-muted-foreground">
-                Tidak ada data
+                {t("dashboard:peakHours.empty")}
               </div>
             ) : (
               <div className="h-40 w-full">
@@ -563,10 +562,10 @@ function DashboardPage() {
                             <div className="rounded-lg border bg-background p-2 shadow-sm">
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Pukul {label}
+                                  {t("dashboard:peakHours.tooltipHour", { label })}
                                 </span>
                                 <span className="font-bold">
-                                  {payload[0].value} Reservasi
+                                  {t("dashboard:peakHours.tooltipCount", { count: payload[0].value })}
                                 </span>
                               </div>
                             </div>
@@ -587,8 +586,8 @@ function DashboardPage() {
       {/* BPJS vs General */}
       <Card>
         <CardHeader>
-          <CardTitle>BPJS vs Umum</CardTitle>
-          <CardDescription>Perbandingan jumlah pasien BPJS dan Umum</CardDescription>
+          <CardTitle>{t("dashboard:bpjsVsGeneral.title")}</CardTitle>
+          <CardDescription>{t("dashboard:bpjsVsGeneral.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {bpjsLoading ? (
@@ -599,7 +598,7 @@ function DashboardPage() {
             </div>
           ) : bpjs.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-muted-foreground">
-              Tidak ada data
+              {t("dashboard:bpjsVsGeneral.empty")}
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -607,9 +606,9 @@ function DashboardPage() {
                 <div key={i} className="text-center p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground mb-2">{item.label}</p>
                   <div className="flex justify-center gap-2 text-sm">
-                    <span className="text-blue-600 font-medium">{item.bpjs} BPJS</span>
+                    <span className="text-blue-600 font-medium">{item.bpjs} {t("dashboard:bpjsVsGeneral.bpjs")}</span>
                     <span className="text-muted-foreground">|</span>
-                    <span className="text-green-600 font-medium">{item.general} Umum</span>
+                    <span className="text-green-600 font-medium">{item.general} {t("dashboard:bpjsVsGeneral.general")}</span>
                   </div>
                 </div>
               ))}

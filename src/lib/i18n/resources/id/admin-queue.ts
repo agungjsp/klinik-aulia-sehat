@@ -1,0 +1,82 @@
+const adminQueueId = {
+  header: {
+    title: "Pendaftaran & Antrean",
+  },
+  actions: {
+    registerPatient: "Daftar Pasien",
+    markNoShow: "Tandai Tidak Hadir",
+  },
+  filters: {
+    allPolies: "Semua Poli",
+    allStatuses: "Semua Status",
+    inProgress: "Sedang Proses",
+  },
+  list: {
+    todayQueueList: "Daftar Antrean Hari Ini",
+    noQueueToday: "Belum ada antrean hari ini",
+    noQueueMatchFilter: "Tidak ada antrean yang sesuai filter",
+  },
+  dialog: {
+    title: "Pendaftaran Pasien",
+    steps: {
+      patient: "Pasien",
+      polyAndSchedule: "Poli & Jadwal",
+      confirmation: "Konfirmasi",
+    },
+  },
+  form: {
+    patientType: "Tipe Pasien",
+    patientName: "Nama Pasien",
+    patientNamePlaceholder: "Cari atau ketik nama pasien...",
+    whatsappNumber: "No. WhatsApp",
+    whatsappPlaceholder: "08xxxxxxxxxx",
+    emailOptional: "Email (opsional)",
+    bpjsNumber: "No. BPJS",
+    bpjsPlaceholder: "Nomor kartu BPJS",
+    continueToPolySchedule: "Lanjut ke Poli & Jadwal",
+    selectPolyAndSchedule: "Pilih Poli dan Jadwal Dokter",
+    required: "Wajib",
+    today: "Hari ini",
+    selectPolyPlaceholder: "Pilih poli tujuan",
+    selectPolyFirst: "Pilih poli terlebih dahulu untuk melihat jadwal dokter.",
+    scheduleQuotaFull: "Kuota jadwal ini sudah penuh. Silakan pilih jadwal lain.",
+    back: "Kembali",
+    continueToConfirmation: "Lanjut ke Konfirmasi",
+    registrationSummary: "Ringkasan Pendaftaran",
+    summary: {
+      patient: "Pasien",
+      whatsappNumber: "No. WhatsApp",
+      type: "Tipe",
+      poly: "Poli",
+      schedule: "Jadwal",
+    },
+    scheduleQuotaFullPrompt: "Kuota jadwal penuh. Pilih jadwal lain sebelum mendaftar.",
+    submitQuotaFull: "Kuota Penuh",
+    submitChooseSchedule: "Pilih Jadwal",
+    submitRegister: "Daftarkan",
+    resetSteps: "Mulai Ulang Langkah",
+  },
+  confirm: {
+    markNoShowTitle: "Tandai Tidak Hadir",
+    markNoShowDescription: "Tandai pasien {{name}} sebagai tidak hadir?",
+    impacts: {
+      queueStatusChanged: "Status antrean pasien akan berubah.",
+      visibleRealtime: "Perubahan ini akan terlihat oleh petugas lain secara realtime.",
+    },
+    registerTitle: "Konfirmasi Pendaftaran Pasien",
+    registerDescription: "Daftarkan pasien ini ke antrean sekarang?",
+    registerImpact1: "Nomor antrean akan dibuat dan langsung aktif.",
+    registerImpact2: "Data antrean akan terlihat realtime oleh tim klinik.",
+  },
+  toasts: {
+    reservationDataUnavailable: "Data reservasi tidak tersedia.",
+    patientMarkedNoShow: "Pasien ditandai tidak hadir",
+    reservationCancelled: "Reservasi dibatalkan",
+    duplicateContactOrBpjs: "Nomor WhatsApp atau BPJS sudah terdaftar dengan nama pasien lain.",
+    scheduleQuotaFull: "Kuota jadwal sudah penuh. Silakan pilih jadwal lain.",
+    patientRegistered: "Pasien berhasil didaftarkan",
+    patientRegisteredWithQueue: "Pasien berhasil didaftarkan - Nomor antrean: {{queueNumber}}",
+  },
+} as const
+
+export default adminQueueId

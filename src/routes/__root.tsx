@@ -1,9 +1,12 @@
 import { Outlet, createRootRoute, redirect, useLocation, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { useAuthStore } from "@/stores"
+import { useLocaleStore } from "@/stores"
 import { AppLayout } from "@/components/layout"
 import { Toaster } from "@/components/ui/sonner"
 import { canAccessRoute } from "@/lib/roles"
+import { normalizeLanguage } from "@/lib/i18n/config"
 
 const publicPaths = ["/login", "/cek-antrean", "/display", "/403", "/no-access"]
 
@@ -31,13 +34,23 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const { i18n } = useTranslation()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
+  const language = useLocaleStore((s) => s.language)
   const location = useLocation()
   const navigate = useNavigate()
   const isPublicPath = publicPaths.some((path) =>
     location.pathname.startsWith(path)
   )
+
+  useEffect(() => {
+    const normalized = normalizeLanguage(language)
+    if (i18n.language !== normalized) {
+      void i18n.changeLanguage(normalized)
+    }
+    document.documentElement.lang = normalized
+  }, [i18n, language])
 
   // Client-side route guard (for SPA navigation)
   useEffect(() => {

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import {
   format,
@@ -14,9 +15,8 @@ import {
   subMonths,
   getDay,
 } from "date-fns"
-import { id } from "date-fns/locale"
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Users, AlertCircle } from "lucide-react"
-import { useScheduleList, useScheduleCreate, useScheduleUpdate, useScheduleDelete } from "@/hooks"
+import { useScheduleList, useScheduleCreate, useScheduleUpdate, useScheduleDelete, useDoctorData } from "@/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,35 +25,32 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { DoctorSelect, useDoctorData } from "@/components/doctor"
+import { DoctorSelect } from "@/components/doctor"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api-error"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
 import type { Schedule } from "@/types"
 
 export const Route = createFileRoute("/jadwal/")({
   component: JadwalPage,
 })
 
-// Helper to check if poly name indicates "Gigi" (dental)
 function isPolyGigi(polyName: string | undefined): boolean {
   if (!polyName) return false
   return polyName.toLowerCase().includes("gigi")
 }
 
-const scheduleSchema = z.object({
-  doctor_id: z.number({ message: "Pilih dokter" }),
-  date: z.string().min(1, "Tanggal wajib diisi"),
-  start_time: z.string().min(1, "Jam mulai wajib diisi"),
-  end_time: z.string().min(1, "Jam selesai wajib diisi"),
-  quota: z.number().nullable().optional(),
-}).refine((data) => data.start_time < data.end_time, {
-  message: "Jam selesai harus lebih besar dari jam mulai",
-  path: ["end_time"],
-})
-
-type ScheduleForm = z.infer<typeof scheduleSchema>
+type ScheduleForm = {
+  doctor_id: number
+  date: string
+  start_time: string
+  end_time: string
+  quota?: number | null
+}
 
 function JadwalPage() {
+  const { t, i18n } = useTranslation(["schedule", "common", "errors"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<number | undefined>(undefined)
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -72,7 +69,18 @@ function JadwalPage() {
   const deleteMutation = useScheduleDelete()
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ScheduleForm>({
-    resolver: zodResolver(scheduleSchema),
+    resolver: zodResolver(
+      z.object({
+        doctor_id: z.number({ message: t("schedule:validation.doctorRequired") }),
+        date: z.string().min(1, t("schedule:validation.dateRequired")),
+        start_time: z.string().min(1, t("schedule:validation.startTimeRequired")),
+        end_time: z.string().min(1, t("schedule:validation.endTimeRequired")),
+        quota: z.number().nullable().optional(),
+      }).refine((data) => data.start_time < data.end_time, {
+        message: t("schedule:validation.endTimeGreater"),
+        path: ["end_time"],
+      }),
+    ),
   })
 
   const watchedDoctorId = watch("doctor_id")
@@ -128,7 +136,7 @@ function JadwalPage() {
   const onSubmit = handleSubmit(async (data) => {
     // Additional validation for Poli Gigi
     if (isSelectedDoctorPoliGigi && (data.quota === null || data.quota === undefined || data.quota <= 0)) {
-      toast.error("Kuota wajib diisi untuk Poli Gigi")
+      toast.error(t("schedule:toasts.quotaRequiredForDental"))
       return
     }
 
@@ -143,10 +151,10 @@ function JadwalPage() {
 
       if (editingSchedule) {
         await updateMutation.mutateAsync({ id: editingSchedule.id, data: payload })
-        toast.success("Jadwal berhasil diupdate")
+        toast.success(t("schedule:toasts.updated"))
       } else {
         await createMutation.mutateAsync(payload)
-        toast.success("Jadwal berhasil ditambahkan")
+        toast.success(t("schedule:toasts.added"))
       }
       setIsFormOpen(false)
       setSelectedDate(null)
@@ -159,7 +167,7 @@ function JadwalPage() {
     if (!deleteId) return
     try {
       await deleteMutation.mutateAsync(deleteId)
-      toast.success("Jadwal berhasil dihapus")
+      toast.success(t("schedule:toasts.deleted"))
       setDeleteId(null)
       setSelectedDate(null)
     } catch (error: unknown) {
@@ -167,7 +175,15 @@ function JadwalPage() {
     }
   }
 
-  const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"]
+  const dayNames = [
+    t("schedule:dayNames.sun"),
+    t("schedule:dayNames.mon"),
+    t("schedule:dayNames.tue"),
+    t("schedule:dayNames.wed"),
+    t("schedule:dayNames.thu"),
+    t("schedule:dayNames.fri"),
+    t("schedule:dayNames.sat"),
+  ]
 
   const isSubmitDisabled = createMutation.isPending || updateMutation.isPending || !isQuotaValid
 
@@ -175,12 +191,12 @@ function JadwalPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Jadwal Dokter</h1>
-          <p className="text-muted-foreground">Kelola jadwal praktik dokter</p>
+          <h1 className="text-2xl font-bold">{t("schedule:page.title")}</h1>
+          <p className="text-muted-foreground">{t("schedule:page.description")}</p>
         </div>
         <Button onClick={() => openCreateForm()}>
           <Plus className="mr-2 h-4 w-4" />
-          Tambah Jadwal
+          {t("schedule:page.addSchedule")}
         </Button>
       </div>
 
@@ -191,7 +207,7 @@ function JadwalPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-[160px] text-center font-medium">
-            {format(currentMonth, "MMMM yyyy", { locale: id })}
+            {format(currentMonth, "MMMM yyyy", { locale: dateFnsLocale })}
           </span>
           <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
             <ChevronRight className="h-4 w-4" />
@@ -202,8 +218,8 @@ function JadwalPage() {
           onChange={setSelectedDoctorFilter}
           className="w-[200px]"
           showAll
-          allLabel="Semua Dokter"
-          placeholder="Filter dokter"
+          allLabel={t("schedule:page.allDoctors")}
+          placeholder={t("schedule:page.filterDoctor")}
         />
       </div>
 
@@ -252,7 +268,7 @@ function JadwalPage() {
                                 ? "bg-blue-100 text-blue-800" 
                                 : "bg-primary/20"
                           )}
-                          title={`${s.doctor?.name} (${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)})${s.quota ? ` - Kuota: ${s.quota}` : ""}${isDoctorPoliGigi ? " - Poli Gigi" : ""}`}
+                          title={`${s.doctor?.name} (${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)})${s.quota ? ` - ${t("schedule:calendar.quota", { quota: s.quota })}` : ""}${isDoctorPoliGigi ? ` - ${t("schedule:calendar.dentalPoly")}` : ""}`}
                         >
                           <span className="truncate">{s.doctor?.name?.split(" ")[0]} {s.start_time.slice(0, 5)}</span>
                           {s.quota && (
@@ -267,7 +283,9 @@ function JadwalPage() {
                       )
                     })}
                     {daySchedules.length > 2 && (
-                      <div className="text-xs text-muted-foreground">+{daySchedules.length - 2} lagi</div>
+                      <div className="text-xs text-muted-foreground">
+                        {t("schedule:calendar.more", { count: daySchedules.length - 2 })}
+                      </div>
                     )}
                   </div>
                 )}
@@ -281,14 +299,14 @@ function JadwalPage() {
       {selectedDate && (
         <div className="rounded-lg border p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-semibold">{format(selectedDate, "EEEE, d MMMM yyyy", { locale: id })}</h3>
+            <h3 className="font-semibold">{format(selectedDate, "EEEE, d MMMM yyyy", { locale: dateFnsLocale })}</h3>
             <Button size="sm" onClick={() => openCreateForm(selectedDate)}>
               <Plus className="mr-1 h-3 w-3" />
-              Tambah
+              {t("schedule:selectedDay.add")}
             </Button>
           </div>
           {getSchedulesForDay(selectedDate).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada jadwal</p>
+            <p className="text-sm text-muted-foreground">{t("schedule:calendar.noSchedule")}</p>
           ) : (
             <div className="space-y-2">
               {getSchedulesForDay(selectedDate).map((s: Schedule) => {
@@ -306,19 +324,19 @@ function JadwalPage() {
                         <p className="font-medium">{s.doctor?.name}</p>
                         {isDoctorPoliGigi && (
                           <Badge variant="outline" className="bg-pink-100 text-pink-700 border-pink-200">
-                            Poli Gigi
+                            {t("schedule:calendar.dentalPoly")}
                           </Badge>
                         )}
                         {s.quota !== null && s.quota !== undefined && (
                           <Badge variant="secondary" className="gap-1">
                             <Users className="h-3 w-3" />
-                            Kuota: {s.quota}
+                            {t("schedule:calendar.quota", { quota: s.quota })}
                           </Badge>
                         )}
                         {isDoctorPoliGigi && (s.quota === null || s.quota === undefined) && (
                           <Badge variant="destructive" className="gap-1">
                             <AlertCircle className="h-3 w-3" />
-                            Kuota belum diset
+                            {t("schedule:selectedDay.quotaNotSet")}
                           </Badge>
                         )}
                       </div>
@@ -347,40 +365,41 @@ function JadwalPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingSchedule ? "Edit Jadwal" : "Tambah Jadwal"}</DialogTitle>
+            <DialogTitle>{editingSchedule ? t("schedule:form.editTitle") : t("schedule:form.addTitle")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Dokter</Label>
+              <Label>{t("schedule:form.doctor")}</Label>
               <DoctorSelect
                 value={watchedDoctorId}
                 onChange={(value) => setValue("doctor_id", value as number)}
-                placeholder="Pilih dokter"
+                placeholder={t("schedule:form.selectDoctor")}
                 showPolyBadge
               />
+              <p className="text-xs text-muted-foreground">{t("schedule:form.doctorHint")}</p>
               {errors.doctor_id && <p className="text-sm text-destructive">{errors.doctor_id.message}</p>}
               {isSelectedDoctorPoliGigi && (
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-sm">
                   <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>Poli Gigi memerlukan kuota wajib</span>
+                  <span>{t("schedule:form.dentalRequiresQuota")}</span>
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Tanggal</Label>
+              <Label htmlFor="date">{t("schedule:form.date")}</Label>
               <Input id="date" type="date" {...register("date")} />
               {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start_time">Jam Mulai</Label>
+                <Label htmlFor="start_time">{t("schedule:form.startTime")}</Label>
                 <Input id="start_time" type="time" {...register("start_time")} />
                 {errors.start_time && <p className="text-sm text-destructive">{errors.start_time.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end_time">Jam Selesai</Label>
+                <Label htmlFor="end_time">{t("schedule:form.endTime")}</Label>
                 <Input id="end_time" type="time" {...register("end_time")} />
                 {errors.end_time && <p className="text-sm text-destructive">{errors.end_time.message}</p>}
               </div>
@@ -388,11 +407,11 @@ function JadwalPage() {
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label htmlFor="quota">Kuota Pasien</Label>
+                <Label htmlFor="quota">{t("schedule:form.patientQuota")}</Label>
                 {isSelectedDoctorPoliGigi ? (
-                  <Badge variant="destructive" className="text-xs">Wajib</Badge>
+                  <Badge variant="destructive" className="text-xs">{t("schedule:form.required")}</Badge>
                 ) : (
-                  <Badge variant="secondary" className="text-xs">Opsional</Badge>
+                  <Badge variant="secondary" className="text-xs">{t("schedule:form.optional")}</Badge>
                 )}
               </div>
               <Controller
@@ -403,7 +422,11 @@ function JadwalPage() {
                     id="quota"
                     type="number"
                     min="1"
-                    placeholder={isSelectedDoctorPoliGigi ? "Masukkan kuota (wajib)" : "Tanpa batas kuota"}
+                    placeholder={
+                      isSelectedDoctorPoliGigi
+                        ? t("schedule:form.quotaRequiredPlaceholder")
+                        : t("schedule:form.quotaOptionalPlaceholder")
+                    }
                     className={cn(
                       isSelectedDoctorPoliGigi && !isQuotaValid && "border-destructive focus-visible:ring-destructive"
                     )}
@@ -416,22 +439,22 @@ function JadwalPage() {
                 )}
               />
               {isSelectedDoctorPoliGigi && !isQuotaValid && (
-                <p className="text-sm text-destructive">Kuota wajib diisi untuk Poli Gigi</p>
+                <p className="text-sm text-destructive">{t("schedule:form.quotaRequiredError")}</p>
               )}
               {!isSelectedDoctorPoliGigi && (
                 <p className="text-xs text-muted-foreground">
-                  Jika diisi, sistem akan membatasi jumlah reservasi untuk jadwal ini.
+                  {t("schedule:form.quotaHint")}
                 </p>
               )}
             </div>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
-                Batal
+                {t("common:actions.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitDisabled}>
                 {(createMutation.isPending || updateMutation.isPending) && <LoadingSpinner size="sm" className="mr-2" />}
-                {editingSchedule ? "Update" : "Simpan"}
+                {editingSchedule ? t("common:actions.update") : t("common:actions.save")}
               </Button>
             </div>
           </form>
@@ -441,10 +464,16 @@ function JadwalPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Hapus Jadwal"
-        description="Apakah Anda yakin ingin menghapus jadwal ini?"
+        title={t("schedule:confirmDelete.title")}
+        description={t("schedule:confirmDelete.description")}
+        entityName={schedules.find((item) => item.id === deleteId)?.doctor?.name}
+        impactItems={[
+          t("schedule:confirmDelete.impact1"),
+          t("schedule:confirmDelete.impact2"),
+        ]}
+        recoveryHint={t("schedule:confirmDelete.recoveryHint")}
         onConfirm={handleDelete}
-        confirmText="Hapus"
+        confirmText={t("common:actions.delete")}
         variant="destructive"
       />
     </div>

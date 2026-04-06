@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { format } from "date-fns"
-import { id as localeId } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 import { Search, RefreshCw, Phone, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useReservationList } from "@/hooks"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
 import type { QueueStatusName, Reservation } from "@/types"
 
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/cek-antrean/")({
 })
 
 function CekAntreanPage() {
+  const { t, i18n } = useTranslation(["common", "queue"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
   const today = format(new Date(), "yyyy-MM-dd")
   const [searchType, setSearchType] = useState<"whatsapp" | "bpjs">("bpjs")
   const [searchValue, setSearchValue] = useState("")
@@ -86,10 +89,10 @@ function CekAntreanPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-900">Klinik Aulia Sehat</h1>
-          <p className="text-blue-600">Cek Status Antrean Anda</p>
+          <h1 className="text-3xl font-bold text-blue-900">{t("common:appName")}</h1>
+          <p className="text-blue-600">{t("queue:labels.checkQueueStatus")}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
+            {format(new Date(), "EEEE, d MMMM yyyy", { locale: dateFnsLocale })}
           </p>
         </div>
 
@@ -105,7 +108,7 @@ function CekAntreanPage() {
             className="flex-1"
           >
             <CreditCard className="h-4 w-4 mr-2" />
-            No. BPJS
+            {t("queue:search.bpjsTab")}
           </Button>
           <Button
             variant={searchType === "whatsapp" ? "default" : "outline"}
@@ -117,7 +120,7 @@ function CekAntreanPage() {
             className="flex-1"
           >
             <Phone className="h-4 w-4 mr-2" />
-            No. WhatsApp
+            {t("queue:search.whatsappTab")}
           </Button>
         </div>
 
@@ -127,8 +130,8 @@ function CekAntreanPage() {
             <Input
               placeholder={
                 searchType === "whatsapp"
-                  ? "Masukkan nomor WhatsApp"
-                  : "Masukkan nomor BPJS"
+                  ? t("queue:search.whatsappPlaceholder")
+                  : t("queue:search.bpjsPlaceholder")
               }
               className="pl-9 h-11"
               value={searchValue}
@@ -136,7 +139,7 @@ function CekAntreanPage() {
             />
           </div>
           <Button type="submit" className="h-11">
-            Cek
+            {t("common:actions.check")}
           </Button>
         </form>
 
@@ -149,10 +152,13 @@ function CekAntreanPage() {
 
         {submittedSearch && !isLoading && !matchingReservation && (
           <div className="rounded-xl bg-white p-6 shadow-lg text-center">
-            <p className="text-lg text-muted-foreground">Antrean tidak ditemukan</p>
+            <p className="text-lg text-muted-foreground">{t("queue:labels.queueNotFound")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Pastikan {searchType === "whatsapp" ? "nomor WhatsApp" : "nomor BPJS"} benar
-              dan Anda sudah terdaftar hari ini
+              {t("queue:labels.ensureRegisteredToday", {
+                searchType: searchType === "whatsapp"
+                  ? t("queue:search.whatsappLabel")
+                  : t("queue:search.bpjsLabel"),
+              })}
             </p>
           </div>
         )}
@@ -170,12 +176,15 @@ function CekAntreanPage() {
         {submittedSearch && reservations.length > 1 && matchingReservation && (
           <div className="mt-4 rounded-xl bg-white p-4 shadow-lg">
             <p className="text-sm font-medium text-muted-foreground mb-3">
-              Anda memiliki {reservations.length} reservasi hari ini:
+              {t("queue:labels.reservationsToday", { count: reservations.length })}
             </p>
             <div className="space-y-2">
               {reservations.map((r) => {
                 const statusName = r.status?.status_name as QueueStatusName
                 const statusConfig = statusName ? QUEUE_STATUS_CONFIG[statusName] : null
+                const statusLabel = statusConfig
+                  ? t(statusConfig.translationKey, { defaultValue: statusConfig.label })
+                  : statusName || t("common:states.unknown")
 
                 return (
                   <div
@@ -193,7 +202,7 @@ function CekAntreanPage() {
                     <Badge
                       className={`${statusConfig?.bgColor || ""} ${statusConfig?.color || ""}`}
                     >
-                      {statusConfig?.label || statusName || "Unknown"}
+                      {statusLabel}
                     </Badge>
                   </div>
                 )
@@ -219,56 +228,60 @@ function ReservationCard({
   onRefresh,
   formatQueueNumber,
 }: ReservationCardProps) {
+  const { t } = useTranslation(["common", "queue"])
   const statusName = reservation.status?.status_name as QueueStatusName
   const statusConfig = statusName ? QUEUE_STATUS_CONFIG[statusName] : null
+  const statusLabel = statusConfig
+    ? t(statusConfig.translationKey, { defaultValue: statusConfig.label })
+    : statusName || t("common:states.unknown")
 
   return (
     <div className="rounded-xl bg-white p-6 shadow-lg space-y-6">
       <div className="text-center">
-        <p className="text-sm text-muted-foreground">Nomor Antrean Anda</p>
+        <p className="text-sm text-muted-foreground">{t("queue:labels.yourQueueNumber")}</p>
         <p className="text-6xl font-bold text-blue-600 my-2">
           {reservation.queue?.queue_number
             ? formatQueueNumber(reservation.queue.queue_number)
             : "-"}
         </p>
         <Badge className={`${statusConfig?.bgColor || ""} ${statusConfig?.color || ""}`}>
-          {statusConfig?.label || statusName || "Unknown"}
+          {statusLabel}
         </Badge>
       </div>
 
       {position > 0 && statusName !== "DONE" && (
         <div className="text-center p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-600">Posisi dalam antrean</p>
+          <p className="text-sm text-blue-600">{t("queue:labels.queuePosition")}</p>
           <p className="text-4xl font-bold text-blue-700">{position}</p>
-          <p className="text-xs text-muted-foreground mt-1">orang di depan Anda</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("queue:labels.peopleAhead")}</p>
         </div>
       )}
 
       {statusName === "DONE" && (
         <div className="text-center p-4 bg-green-50 rounded-lg">
-          <p className="text-sm text-green-600">Pemeriksaan telah selesai</p>
+          <p className="text-sm text-green-600">{t("queue:labels.examinationDone")}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Silakan menuju ke kasir atau apotek
+            {t("queue:labels.proceedToCashier")}
           </p>
         </div>
       )}
 
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Nama</span>
+          <span className="text-muted-foreground">{t("common:labels.name")}</span>
           <span className="font-medium">{reservation.patient?.patient_name || "-"}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Poli</span>
+          <span className="text-muted-foreground">{t("common:labels.poly")}</span>
           <span className="font-medium">{reservation.poly?.name || "-"}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Tipe</span>
-          <span className="font-medium">{reservation.bpjs ? "BPJS" : "Umum"}</span>
+          <span className="text-muted-foreground">{t("common:labels.type")}</span>
+          <span className="font-medium">{reservation.bpjs ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}</span>
         </div>
         {reservation.queue?.re_reservation_time && (
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Waktu Daftar</span>
+            <span className="text-muted-foreground">{t("queue:labels.waitRegistrationTime")}</span>
             <span className="font-medium">
               {reservation.queue.re_reservation_time.slice(0, 5)}
             </span>
@@ -278,7 +291,7 @@ function ReservationCard({
 
       <Button variant="outline" className="w-full" onClick={onRefresh}>
         <RefreshCw className="mr-2 h-4 w-4" />
-        Refresh Status
+        {t("common:actions.refresh")}
       </Button>
     </div>
   )

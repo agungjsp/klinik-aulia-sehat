@@ -1,0 +1,68 @@
+const scheduleId = {
+  page: {
+    title: "Jadwal Dokter",
+    description: "Kelola jadwal praktik dokter",
+    addSchedule: "Tambah Jadwal",
+    allDoctors: "Semua Dokter",
+    filterDoctor: "Filter dokter",
+  },
+  dayNames: {
+    sun: "Min",
+    mon: "Sen",
+    tue: "Sel",
+    wed: "Rab",
+    thu: "Kam",
+    fri: "Jum",
+    sat: "Sab",
+  },
+  calendar: {
+    more: "+{{count}} lagi",
+    quota: "Kuota: {{quota}}",
+    dentalPoly: "Poli Gigi",
+    noSchedule: "Tidak ada jadwal",
+  },
+  selectedDay: {
+    add: "Tambah",
+    quotaNotSet: "Kuota belum diset",
+  },
+  form: {
+    addTitle: "Tambah Jadwal",
+    editTitle: "Edit Jadwal",
+    doctor: "Dokter",
+    selectDoctor: "Pilih dokter",
+    doctorHint: "Pilih dokter terlebih dahulu agar validasi kuota menyesuaikan poli layanan.",
+    dentalRequiresQuota: "Poli Gigi memerlukan kuota wajib",
+    date: "Tanggal",
+    startTime: "Jam Mulai",
+    endTime: "Jam Selesai",
+    patientQuota: "Kuota Pasien",
+    required: "Wajib",
+    optional: "Opsional",
+    quotaRequiredPlaceholder: "Masukkan kuota (wajib)",
+    quotaOptionalPlaceholder: "Tanpa batas kuota",
+    quotaRequiredError: "Kuota wajib diisi untuk Poli Gigi",
+    quotaHint: "Jika diisi, sistem akan membatasi jumlah reservasi untuk jadwal ini.",
+  },
+  confirmDelete: {
+    title: "Hapus Jadwal",
+    description: "Apakah Anda yakin ingin menghapus jadwal ini?",
+    impact1: "Slot jadwal tidak bisa lagi dipakai untuk reservasi baru.",
+    impact2: "Reservasi yang sudah ada perlu dijadwalkan ulang manual jika terdampak.",
+    recoveryHint: "Pastikan tidak ada pasien yang masih bergantung pada slot ini sebelum hapus.",
+  },
+  toasts: {
+    quotaRequiredForDental: "Kuota wajib diisi untuk Poli Gigi",
+    updated: "Jadwal berhasil diupdate",
+    added: "Jadwal berhasil ditambahkan",
+    deleted: "Jadwal berhasil dihapus",
+  },
+  validation: {
+    doctorRequired: "Pilih dokter",
+    dateRequired: "Tanggal wajib diisi",
+    startTimeRequired: "Jam mulai wajib diisi",
+    endTimeRequired: "Jam selesai wajib diisi",
+    endTimeGreater: "Jam selesai harus lebih besar dari jam mulai",
+  },
+} as const
+
+export default scheduleId

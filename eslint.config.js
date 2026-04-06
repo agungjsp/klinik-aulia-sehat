@@ -34,4 +34,24 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    files: ['src/hooks/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/hooks',
+              message: 'Do not import hooks barrel from within src/hooks; import concrete hook modules directly.',
+            },
+            {
+              name: '@/hooks/index',
+              message: 'Do not import hooks barrel from within src/hooks; import concrete hook modules directly.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ])

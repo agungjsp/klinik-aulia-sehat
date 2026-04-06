@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { Stethoscope } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { useUserList } from "@/hooks"
 import {
   Select,
@@ -35,14 +36,18 @@ function isPolyGigi(polyName: string | undefined): boolean {
 export function DoctorSelect({
   value,
   onChange,
-  placeholder = "Pilih dokter",
+  placeholder,
   disabled = false,
   className,
   showIcon = true,
   showPolyBadge = true,
   showAll = false,
-  allLabel = "Semua Dokter",
+  allLabel,
 }: DoctorSelectProps) {
+  const { t } = useTranslation(["common", "nav"])
+  const resolvedPlaceholder = placeholder ?? t("nav:items.doctorSchedule")
+  const resolvedAllLabel = allLabel ?? t("actions.all")
+
   const { data: usersData, isLoading } = useUserList({ per_page: 1000 })
   
   // Filter users yang memiliki role "Dokter" atau "Doctor" (case insensitive)
@@ -80,16 +85,16 @@ export function DoctorSelect({
       <SelectTrigger className={cn("w-full", className)}>
         <div className="flex items-center gap-2">
           {showIcon && <Stethoscope className="h-4 w-4 text-muted-foreground" />}
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={resolvedPlaceholder} />
         </div>
       </SelectTrigger>
       <SelectContent>
         {showAll && (
-          <SelectItem value="__all">{allLabel}</SelectItem>
+          <SelectItem value="__all">{resolvedAllLabel}</SelectItem>
         )}
         {doctors.length === 0 ? (
           <SelectItem value="__empty" disabled>
-            Tidak ada dokter
+            {t("states.noData")}
           </SelectItem>
         ) : (
           doctors.map((doc) => {
@@ -116,21 +121,4 @@ export function DoctorSelect({
       </SelectContent>
     </Select>
   )
-}
-
-/** Get doctor data by ID (for use with form validation) */
-export function useDoctorData(doctorId: number | undefined) {
-  const { data: usersData } = useUserList({ per_page: 1000 })
-  
-  return useMemo(() => {
-    if (!doctorId) return null
-    const allUsers = usersData?.data || []
-    const doctors = allUsers.filter((u) => 
-      u.roles?.some((r) => {
-        const roleName = r.name?.toLowerCase() || ""
-        return roleName === "dokter" || roleName === "doctor"
-      })
-    )
-    return doctors.find((d) => d.id === doctorId) || null
-  }, [doctorId, usersData?.data])
 }

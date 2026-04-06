@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState, useMemo } from "react"
 import { format, subDays } from "date-fns"
-import { id as localeId } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 import {
   Download,
   FileSpreadsheet,
@@ -49,21 +49,35 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Badge } from "@/components/ui/badge"
-import { PaginationControls } from "@/components/ui/pagination-controls"
+import { DataTable, DataTablePagination } from "@/components/data-table"
 import { PolySelect } from "@/components/poly"
 import { UserSelect } from "@/components/user"
+import i18nInstance from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import type { ReportParams } from "@/types"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
+import type {
+  DataTableColumn,
+  DataTablePaginationMeta,
+  ReportParams,
+  PatientVisitReportItem,
+  NoShowCancelledReportItem,
+  BpjsVsGeneralReportItem,
+  PolyPerformanceReportItem,
+  WaitingTimeReportItem,
+  BusyHourReportItem,
+  UserActivityReportItem,
+} from "@/types"
 
 export const Route = createFileRoute("/laporan/")({
   component: LaporanPage,
 })
 
 function LaporanPage() {
+  const { t, i18n: currentI18n } = useTranslation(["reports", "common", "queue"])
+  const { dateFnsLocale } = getLocaleByLanguage(currentI18n.language)
   const today = format(new Date(), "yyyy-MM-dd")
   const thirtyDaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd")
 
@@ -100,9 +114,9 @@ function LaporanPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Laporan</h1>
+          <h1 className="text-2xl font-bold">{t("reports:page.title")}</h1>
           <p className="text-muted-foreground">
-            {format(new Date(), "EEEE, d MMMM yyyy", { locale: localeId })}
+            {format(new Date(), "EEEE, d MMMM yyyy", { locale: dateFnsLocale })}
           </p>
         </div>
       </div>
@@ -112,13 +126,13 @@ function LaporanPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            Filter Laporan
+            {t("reports:page.filterTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
-              <Label htmlFor="date_from">Dari Tanggal</Label>
+              <Label htmlFor="date_from">{t("reports:page.dateFrom")}</Label>
               <Input
                 id="date_from"
                 type="date"
@@ -128,7 +142,7 @@ function LaporanPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="date_to">Sampai Tanggal</Label>
+              <Label htmlFor="date_to">{t("reports:page.dateTo")}</Label>
               <Input
                 id="date_to"
                 type="date"
@@ -138,38 +152,40 @@ function LaporanPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Poli</Label>
+              <Label>{t("common:labels.poly")}</Label>
               <PolySelect
                 value={selectedPolyId}
                 onChange={setSelectedPolyId}
                 className="w-[150px] bg-background"
                 showAll
-                allLabel="Semua Poli"
+                allLabel={t("reports:page.allPolies")}
                 showIcon={false}
               />
             </div>
             <div className="space-y-1">
-              <Label>Asuransi</Label>
+              <Label>{t("reports:page.insurance")}</Label>
               <Select
                 value={insuranceType ?? "all"}
                 onValueChange={(v) => setInsuranceType(v === "all" ? undefined : v === "BPJS" ? "BPJS" : "GENERAL")}
               >
                 <SelectTrigger className="w-[160px] bg-background">
-                  <SelectValue placeholder="Semua" />
+                  <SelectValue placeholder={t("common:actions.all")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="BPJS">BPJS</SelectItem>
-                  <SelectItem value="GENERAL">Umum</SelectItem>
+                  <SelectItem value="all">{t("common:actions.all")}</SelectItem>
+                  <SelectItem value="BPJS">{t("queue:patientTypes.bpjs")}</SelectItem>
+                  <SelectItem value="GENERAL">{t("queue:patientTypes.general")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Status</Label>
+              <Label>{t("common:labels.status")}</Label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-[180px] justify-between bg-background">
-                    {selectedStatusIds.length > 0 ? `${selectedStatusIds.length} dipilih` : "Semua"}
+                    {selectedStatusIds.length > 0
+                      ? t("reports:page.statusSelected", { count: selectedStatusIds.length })
+                      : t("common:actions.all")}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -187,18 +203,18 @@ function LaporanPage() {
               </DropdownMenu>
             </div>
             <div className="space-y-1">
-              <Label>User</Label>
+              <Label>{t("reports:userActivity.columns.user")}</Label>
               <UserSelect
                 value={selectedUserId}
                 onChange={setSelectedUserId}
                 className="w-[180px] bg-background"
                 showAll
-                allLabel="Semua User"
+                allLabel={t("reports:page.allUsers")}
                 showIcon={false}
               />
             </div>
             <div className="space-y-1">
-              <Label>Page</Label>
+              <Label>{t("reports:page.page")}</Label>
               <Input
                 type="number"
                 value={page}
@@ -208,7 +224,7 @@ function LaporanPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Per Page</Label>
+              <Label>{t("reports:page.perPage")}</Label>
               <Input
                 type="number"
                 value={perPage}
@@ -230,31 +246,31 @@ function LaporanPage() {
         <TabsList className="flex-wrap h-auto gap-2 bg-muted/50 p-2">
           <TabsTrigger value="patient-visits" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Users className="h-4 w-4" />
-            Kunjungan Pasien
+            {t("reports:tabs.patientVisits")}
           </TabsTrigger>
           <TabsTrigger value="no-show" className="gap-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white">
             <UserX className="h-4 w-4" />
-            No Show & Batal
+            {t("reports:tabs.noShowCancelled")}
           </TabsTrigger>
           <TabsTrigger value="bpjs" className="gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
             <FileSpreadsheet className="h-4 w-4" />
-            BPJS vs Umum
+            {t("reports:tabs.bpjsVsGeneral")}
           </TabsTrigger>
           <TabsTrigger value="poly-performance" className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             <Building className="h-4 w-4" />
-            Kinerja Poli
+            {t("reports:tabs.polyPerformance")}
           </TabsTrigger>
           <TabsTrigger value="waiting-time" className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white">
             <Clock className="h-4 w-4" />
-            Waktu Tunggu
+            {t("reports:tabs.waitingTime")}
           </TabsTrigger>
           <TabsTrigger value="busy-hour" className="gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white">
             <Activity className="h-4 w-4" />
-            Jam Sibuk
+            {t("reports:tabs.busyHour")}
           </TabsTrigger>
           <TabsTrigger value="user-activity" className="gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-white">
             <Users className="h-4 w-4" />
-            Aktivitas User
+            {t("reports:tabs.userActivity")}
           </TabsTrigger>
         </TabsList>
 
@@ -301,10 +317,9 @@ function LaporanPage() {
  */
 function formatWaitingTime(minutes: number | null | undefined, isAverage = false): string {
   if (minutes === null || minutes === undefined) return "-"
-  if (isAverage) {
-    return `${Math.round(minutes * 10) / 10} menit`
-  }
-  return `${Math.round(minutes)} menit`
+
+  const value = isAverage ? Math.round(minutes * 10) / 10 : Math.round(minutes)
+  return i18nInstance.t("reports:format.minutes", { value })
 }
 
 interface KPICardProps {
@@ -402,6 +417,20 @@ interface EmptyStateProps {
   description: string
 }
 
+function toDataTablePaginationMeta(pagination: { current_page: number; per_page: number; total: number; last_page: number }): DataTablePaginationMeta {
+  const currentPage = pagination.current_page ?? 1
+  const totalPages = pagination.last_page ?? 1
+
+  return {
+    currentPage,
+    totalPages,
+    perPage: pagination.per_page ?? 10,
+    totalItems: pagination.total ?? 0,
+    hasPrevPage: currentPage > 1,
+    hasNextPage: currentPage < totalPages,
+  }
+}
+
 function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -425,26 +454,58 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
   setPage: (page: number) => void
   setPerPage: (perPage: number) => void
 }) {
+  const { t } = useTranslation(["reports", "queue"])
+  void page
+  void perPage
   const { data, isLoading } = usePatientVisitsReport(params)
   const exportMutation = useExportPatientVisits()
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
   const stats = useMemo(() => {
     if (!data?.data || data.data.length === 0) return null
     const total = data.data.length
-    const completed = data.data.filter((d) => d.status === "DONE" || d.status === "Selesai").length
+    const completed = data.data.filter((d) => d.status === "DONE" || d.status === "Selesai" || d.status === "Done").length
     const bpjs = data.data.filter((d) => d.insurance_type === "BPJS").length
     const avgWait = data.data.filter((d) => d.waiting_time_minutes).reduce((sum, d) => sum + (d.waiting_time_minutes || 0), 0) / (data.data.filter((d) => d.waiting_time_minutes).length || 1)
     return { total, completed, bpjs, avgWait: Math.round(avgWait) }
   }, [data])
+
+  const columns: DataTableColumn<PatientVisitReportItem>[] = [
+    { id: "date", header: t("reports:patientVisits.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "patient_name", header: t("reports:patientVisits.columns.patientName"), cell: (item) => item.patient_name, widthClassName: "min-w-[220px]" },
+    { id: "poly", header: t("reports:patientVisits.columns.poly"), cell: (item) => <Badge variant="outline">{item.poly}</Badge>, widthClassName: "w-36" },
+    {
+      id: "insurance_type",
+      header: t("reports:patientVisits.columns.type"),
+      cell: (item) => (
+        <Badge variant={item.insurance_type === "BPJS" ? "default" : "secondary"}>
+          {item.insurance_type === "BPJS" ? t("queue:patientTypes.bpjs") : t("queue:patientTypes.general")}
+        </Badge>
+      ),
+      widthClassName: "w-28",
+    },
+    {
+      id: "status",
+      header: t("reports:patientVisits.columns.status"),
+      cell: (item) => <Badge variant={item.status === "DONE" || item.status === "Selesai" || item.status === "Done" ? "default" : "outline"}>{item.status}</Badge>,
+      widthClassName: "w-32",
+    },
+    {
+      id: "waiting_time",
+      header: t("reports:patientVisits.columns.waitingTime"),
+      cell: (item) => formatWaitingTime(item.waiting_time_minutes),
+      widthClassName: "w-36",
+      align: "right",
+    },
+  ]
 
   if (isLoading) return <ReportSkeleton />
 
@@ -454,28 +515,32 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KPICard
-            title="Total Kunjungan"
+            title={t("reports:patientVisits.kpi.totalVisits")}
             value={stats.total}
             icon={Users}
             color="blue"
           />
           <KPICard
-            title="Selesai Dilayani"
+            title={t("reports:patientVisits.kpi.completed")}
             value={stats.completed}
-            subtitle={`${((stats.completed / stats.total) * 100).toFixed(0)}% dari total`}
+            subtitle={t("reports:format.percentOfTotal", {
+              percent: ((stats.completed / stats.total) * 100).toFixed(0),
+            })}
             icon={TrendingUp}
             color="green"
           />
           <KPICard
-            title="Pasien BPJS"
+            title={t("reports:patientVisits.kpi.bpjsPatients")}
             value={stats.bpjs}
-            subtitle={`${((stats.bpjs / stats.total) * 100).toFixed(0)}% dari total`}
+            subtitle={t("reports:format.percentOfTotal", {
+              percent: ((stats.bpjs / stats.total) * 100).toFixed(0),
+            })}
             icon={FileSpreadsheet}
             color="purple"
           />
           <KPICard
-            title="Rata-rata Tunggu"
-            value={`${stats.avgWait} menit`}
+            title={t("reports:patientVisits.kpi.averageWait")}
+            value={formatWaitingTime(stats.avgWait)}
             icon={Clock}
             color="amber"
           />
@@ -488,13 +553,13 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
-                Laporan Kunjungan Pasien
+                {t("reports:patientVisits.title")}
               </CardTitle>
-              <CardDescription>Daftar kunjungan pasien berdasarkan filter</CardDescription>
+              <CardDescription>{t("reports:patientVisits.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -502,56 +567,26 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={Users}
-              title="Tidak ada data kunjungan"
-              description="Coba perluas rentang tanggal atau ubah filter poli untuk melihat data kunjungan pasien."
+              title={t("reports:patientVisits.emptyTitle")}
+              description={t("reports:patientVisits.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Nama Pasien</TableHead>
-                    <TableHead>Poli</TableHead>
-                    <TableHead>Tipe</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Waktu Tunggu</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => (
-                    <TableRow key={i} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{item.date}</TableCell>
-                      <TableCell>{item.patient_name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.poly}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={item.insurance_type === "BPJS" ? "default" : "secondary"}>
-                          {item.insurance_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={item.status === "DONE" || item.status === "Selesai" ? "default" : "outline"}>
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatWaitingTime(item.waiting_time_minutes)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.patient_name}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:patientVisits.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}
@@ -560,15 +595,18 @@ function PatientVisitsReportSection({ params, page, perPage, setPage, setPerPage
 }
 
 function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
+  const { t } = useTranslation(["reports"])
+  void page
+  void perPage
   const { data, isLoading } = useNoShowCancelledReport(params)
   const exportMutation = useExportNoShowCancelled()
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
@@ -581,6 +619,39 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
     return { totalReservations, totalNoShow, totalCancelled, avgRatio }
   }, [data])
 
+  const columns: DataTableColumn<NoShowCancelledReportItem>[] = [
+    { id: "date", header: t("reports:noShow.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "poly", header: t("reports:noShow.columns.poly"), cell: (item) => <Badge variant="outline">{item.poly}</Badge>, widthClassName: "w-36" },
+    {
+      id: "total_reservations",
+      header: t("reports:noShow.columns.totalReservations"),
+      cell: (item) => item.total_reservations,
+      align: "right",
+      widthClassName: "w-40",
+    },
+    {
+      id: "no_show",
+      header: t("reports:noShow.columns.noShow"),
+      align: "right",
+      widthClassName: "w-28",
+      cell: (item) => <span className={item.no_show > 0 ? "text-orange-600 font-medium" : ""}>{item.no_show}</span>,
+    },
+    {
+      id: "cancelled",
+      header: t("reports:noShow.columns.cancelled"),
+      align: "right",
+      widthClassName: "w-28",
+      cell: (item) => <span className={item.cancelled > 0 ? "text-red-600 font-medium" : ""}>{item.cancelled}</span>,
+    },
+    {
+      id: "ratio_percent",
+      header: t("reports:noShow.columns.ratio"),
+      align: "right",
+      widthClassName: "w-28",
+      cell: (item) => <Badge variant={item.ratio_percent > 10 ? "destructive" : "secondary"}>{item.ratio_percent.toFixed(1)}%</Badge>,
+    },
+  ]
+
   if (isLoading) return <ReportSkeleton />
 
   return (
@@ -589,29 +660,29 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KPICard
-            title="Total Reservasi"
+            title={t("reports:noShow.kpi.totalReservations")}
             value={stats.totalReservations}
             icon={Users}
             color="blue"
           />
           <KPICard
-            title="Tidak Hadir"
+            title={t("reports:noShow.kpi.noShow")}
             value={stats.totalNoShow}
             subtitle={`${stats.totalReservations > 0 ? ((stats.totalNoShow / stats.totalReservations) * 100).toFixed(1) : 0}%`}
             icon={UserX}
             color="orange"
           />
           <KPICard
-            title="Dibatalkan"
+            title={t("reports:noShow.kpi.cancelled")}
             value={stats.totalCancelled}
             subtitle={`${stats.totalReservations > 0 ? ((stats.totalCancelled / stats.totalReservations) * 100).toFixed(1) : 0}%`}
             icon={XCircle}
             color="red"
           />
           <KPICard
-            title="Rasio Gagal"
+            title={t("reports:noShow.kpi.failedRatio")}
             value={`${stats.avgRatio.toFixed(1)}%`}
-            subtitle="No show + Batal"
+            subtitle={t("reports:noShow.kpi.failedRatioSubtitle")}
             icon={AlertCircle}
             color="amber"
           />
@@ -624,13 +695,13 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserX className="h-5 w-5 text-orange-600" />
-                Laporan No Show & Pembatalan
+                {t("reports:noShow.title")}
               </CardTitle>
-              <CardDescription>Statistik pasien tidak hadir dan pembatalan</CardDescription>
+              <CardDescription>{t("reports:noShow.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -638,60 +709,26 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={UserX}
-              title="Tidak ada data no-show"
-              description="Tidak ada pasien yang tidak hadir atau membatalkan reservasi pada periode ini."
+              title={t("reports:noShow.emptyTitle")}
+              description={t("reports:noShow.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Poli</TableHead>
-                    <TableHead className="text-right">Total Reservasi</TableHead>
-                    <TableHead className="text-right">No Show</TableHead>
-                    <TableHead className="text-right">Dibatalkan</TableHead>
-                    <TableHead className="text-right">Rasio</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => (
-                    <TableRow key={i} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{item.date}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.poly}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{item.total_reservations}</TableCell>
-                      <TableCell className="text-right">
-                        <span className={item.no_show > 0 ? "text-orange-600 font-medium" : ""}>
-                          {item.no_show}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={item.cancelled > 0 ? "text-red-600 font-medium" : ""}>
-                          {item.cancelled}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={item.ratio_percent > 10 ? "destructive" : "secondary"}>
-                          {item.ratio_percent.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.poly}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:noShow.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}
@@ -700,15 +737,18 @@ function NoShowReportSection({ params, page, perPage, setPage, setPerPage }: { p
 }
 
 function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
+  const { t } = useTranslation(["reports", "queue"])
+  void page
+  void perPage
   const { data, isLoading } = useBpjsVsGeneralReport(params)
   const exportMutation = useExportBpjsVsGeneral()
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
@@ -720,6 +760,39 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
     return { totalBpjs, totalGeneral, total }
   }, [data])
 
+  const columns: DataTableColumn<BpjsVsGeneralReportItem>[] = [
+    { id: "date", header: t("reports:bpjsVsGeneral.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "poly", header: t("reports:bpjsVsGeneral.columns.poly"), cell: (item) => <Badge variant="outline">{item.poly}</Badge>, widthClassName: "w-36" },
+    {
+      id: "total_bpjs",
+      header: t("reports:bpjsVsGeneral.columns.bpjs"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (item) => <span className="text-green-600 font-medium">{item.total_bpjs}</span>,
+    },
+    {
+      id: "total_general",
+      header: t("reports:bpjsVsGeneral.columns.general"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (item) => <span className="text-purple-600 font-medium">{item.total_general}</span>,
+    },
+    {
+      id: "bpjs_percentage",
+      header: t("reports:bpjsVsGeneral.columns.bpjsPercentage"),
+      align: "right",
+      widthClassName: "w-28",
+      cell: (item) => <Badge variant="default" className="bg-green-600">{item.bpjs_percentage.toFixed(1)}%</Badge>,
+    },
+    {
+      id: "general_percentage",
+      header: t("reports:bpjsVsGeneral.columns.generalPercentage"),
+      align: "right",
+      widthClassName: "w-28",
+      cell: (item) => <Badge variant="secondary">{item.general_percentage.toFixed(1)}%</Badge>,
+    },
+  ]
+
   if (isLoading) return <ReportSkeleton />
 
   return (
@@ -728,28 +801,36 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KPICard
-            title="Total Pasien"
+            title={t("reports:bpjsVsGeneral.kpi.totalPatients")}
             value={stats.total}
             icon={Users}
             color="blue"
           />
           <KPICard
-            title="Pasien BPJS"
+            title={t("reports:bpjsVsGeneral.kpi.bpjsPatients")}
             value={stats.totalBpjs}
-            subtitle={`${((stats.totalBpjs / stats.total) * 100).toFixed(0)}% dari total`}
+            subtitle={t("reports:format.percentOfTotal", {
+              percent: ((stats.totalBpjs / stats.total) * 100).toFixed(0),
+            })}
             icon={FileSpreadsheet}
             color="green"
           />
           <KPICard
-            title="Pasien Umum"
+            title={t("reports:bpjsVsGeneral.kpi.generalPatients")}
             value={stats.totalGeneral}
-            subtitle={`${((stats.totalGeneral / stats.total) * 100).toFixed(0)}% dari total`}
+            subtitle={t("reports:format.percentOfTotal", {
+              percent: ((stats.totalGeneral / stats.total) * 100).toFixed(0),
+            })}
             icon={Users}
             color="purple"
           />
           <KPICard
-            title="Rasio BPJS:Umum"
-            value={stats.totalGeneral > 0 ? `${(stats.totalBpjs / stats.totalGeneral).toFixed(1)}:1` : "N/A"}
+            title={t("reports:bpjsVsGeneral.kpi.ratio")}
+            value={
+              stats.totalGeneral > 0
+                ? `${(stats.totalBpjs / stats.totalGeneral).toFixed(1)}:1`
+                : t("reports:bpjsVsGeneral.kpi.ratioFallback")
+            }
             icon={BarChart3}
             color="amber"
           />
@@ -762,13 +843,13 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                Laporan BPJS vs Umum
+                {t("reports:bpjsVsGeneral.title")}
               </CardTitle>
-              <CardDescription>Perbandingan jumlah pasien BPJS dan Umum</CardDescription>
+              <CardDescription>{t("reports:bpjsVsGeneral.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -776,60 +857,26 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={FileSpreadsheet}
-              title="Tidak ada data perbandingan"
-              description="Coba perluas rentang tanggal untuk melihat perbandingan pasien BPJS vs Umum."
+              title={t("reports:bpjsVsGeneral.emptyTitle")}
+              description={t("reports:bpjsVsGeneral.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Poli</TableHead>
-                    <TableHead className="text-right">BPJS</TableHead>
-                    <TableHead className="text-right">Umum</TableHead>
-                    <TableHead className="text-right">% BPJS</TableHead>
-                    <TableHead className="text-right">% Umum</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => (
-                    <TableRow key={i} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{item.date}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.poly}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-green-600 font-medium">{item.total_bpjs}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-purple-600 font-medium">{item.total_general}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="default" className="bg-green-600">
-                          {item.bpjs_percentage.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">
-                          {item.general_percentage.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.poly}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:bpjsVsGeneral.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}
@@ -838,15 +885,18 @@ function BpjsReportSection({ params, page, perPage, setPage, setPerPage }: { par
 }
 
 function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
+  const { t } = useTranslation(["reports"])
+  void page
+  void perPage
   const { data, isLoading } = usePolyPerformanceReport(params)
   const exportMutation = useExportPolyPerformance()
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
@@ -859,6 +909,38 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
     return { totalPatients, avgWait: Math.round(avgWait), avgNoShow, topPoly }
   }, [data])
 
+  const columns: DataTableColumn<PolyPerformanceReportItem>[] = [
+    { id: "date", header: t("reports:polyPerformance.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "poly", header: t("reports:polyPerformance.columns.poly"), cell: (item) => <Badge variant="outline">{item.poly}</Badge>, widthClassName: "w-36" },
+    {
+      id: "total_patients",
+      header: t("reports:polyPerformance.columns.totalPatients"),
+      align: "right",
+      widthClassName: "w-32",
+      cell: (item) => <span className="font-medium">{item.total_patients}</span>,
+    },
+    {
+      id: "avg_wait",
+      header: t("reports:polyPerformance.columns.waitingTime"),
+      align: "right",
+      widthClassName: "w-36",
+      cell: (item) => formatWaitingTime(item.average_waiting_time_minutes, true),
+    },
+    {
+      id: "no_show_rate",
+      header: t("reports:polyPerformance.columns.noShowRate"),
+      align: "right",
+      widthClassName: "w-36",
+      cell: (item) => <Badge variant={item.no_show_rate_percent > 10 ? "destructive" : "secondary"}>{item.no_show_rate_percent.toFixed(1)}%</Badge>,
+    },
+    {
+      id: "peak_hour",
+      header: t("reports:polyPerformance.columns.peakHour"),
+      widthClassName: "w-36",
+      cell: (item) => <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">{item.peak_hour}</Badge>,
+    },
+  ]
+
   if (isLoading) return <ReportSkeleton />
 
   return (
@@ -867,27 +949,27 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KPICard
-            title="Total Pasien"
+            title={t("reports:polyPerformance.kpi.totalPatients")}
             value={stats.totalPatients}
             icon={Users}
             color="blue"
           />
           <KPICard
-            title="Rata-rata Tunggu"
-            value={`${stats.avgWait} menit`}
+            title={t("reports:polyPerformance.kpi.averageWait")}
+            value={formatWaitingTime(stats.avgWait)}
             icon={Clock}
             color="purple"
           />
           <KPICard
-            title="Rata-rata No Show"
+            title={t("reports:polyPerformance.kpi.averageNoShow")}
             value={`${stats.avgNoShow.toFixed(1)}%`}
             icon={UserX}
             color="orange"
           />
           <KPICard
-            title="Poli Tersibuk"
+            title={t("reports:polyPerformance.kpi.busiestPoly")}
             value={stats.topPoly.poly}
-            subtitle={`${stats.topPoly.total_patients} pasien`}
+            subtitle={t("reports:format.patientCount", { count: stats.topPoly.total_patients })}
             icon={Building}
             color="green"
           />
@@ -900,13 +982,13 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building className="h-5 w-5 text-blue-600" />
-                Laporan Kinerja Poli
+                {t("reports:polyPerformance.title")}
               </CardTitle>
-              <CardDescription>Statistik performa per poli</CardDescription>
+              <CardDescription>{t("reports:polyPerformance.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -914,58 +996,26 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={Building}
-              title="Tidak ada data kinerja poli"
-              description="Coba perluas rentang tanggal untuk melihat statistik performa poli."
+              title={t("reports:polyPerformance.emptyTitle")}
+              description={t("reports:polyPerformance.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Poli</TableHead>
-                    <TableHead className="text-right">Total Pasien</TableHead>
-                    <TableHead className="text-right">Waktu Tunggu</TableHead>
-                    <TableHead className="text-right">No Show Rate</TableHead>
-                    <TableHead>Jam Sibuk</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => (
-                    <TableRow key={i} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{item.date}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.poly}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{item.total_patients}</TableCell>
-                      <TableCell className="text-right">
-                        {formatWaitingTime(item.average_waiting_time_minutes, true)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={item.no_show_rate_percent > 10 ? "destructive" : "secondary"}>
-                          {item.no_show_rate_percent.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                          {item.peak_hour}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.poly}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:polyPerformance.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}
@@ -974,15 +1024,18 @@ function PolyPerformanceReportSection({ params, page, perPage, setPage, setPerPa
 }
 
 function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
+  const { t } = useTranslation(["reports"])
+  void page
+  void perPage
   const { data, isLoading } = useWaitingTimeReport(params)
   const exportMutation = useExportWaitingTime()
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
@@ -1000,6 +1053,36 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
     }
   }, [data])
 
+  const columns: DataTableColumn<WaitingTimeReportItem>[] = [
+    { id: "date", header: t("reports:waitingTime.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "poly", header: t("reports:waitingTime.columns.poly"), cell: (item) => <Badge variant="outline">{item.poly}</Badge>, widthClassName: "w-36" },
+    {
+      id: "average_waiting_time_minutes",
+      header: t("reports:waitingTime.columns.average"),
+      align: "right",
+      widthClassName: "w-36",
+      cell: (item) => <span className="font-medium text-purple-600">{formatWaitingTime(item.average_waiting_time_minutes, true)}</span>,
+    },
+    {
+      id: "longest_waiting_time_minutes",
+      header: t("reports:waitingTime.columns.longest"),
+      align: "right",
+      widthClassName: "w-36",
+      cell: (item) => (
+        <span className={item.longest_waiting_time_minutes && item.longest_waiting_time_minutes > 30 ? "text-red-600" : ""}>
+          {formatWaitingTime(item.longest_waiting_time_minutes)}
+        </span>
+      ),
+    },
+    {
+      id: "fastest_waiting_time_minutes",
+      header: t("reports:waitingTime.columns.fastest"),
+      align: "right",
+      widthClassName: "w-36",
+      cell: (item) => <span className="text-green-600">{formatWaitingTime(item.fastest_waiting_time_minutes)}</span>,
+    },
+  ]
+
   if (isLoading) return <ReportSkeleton />
 
   return (
@@ -1008,25 +1091,25 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KPICard
-            title="Rata-rata Tunggu"
-            value={`${stats.avgWait} menit`}
+            title={t("reports:waitingTime.kpi.averageWait")}
+            value={formatWaitingTime(stats.avgWait)}
             icon={Clock}
             color="purple"
           />
           <KPICard
-            title="Waktu Terlama"
-            value={`${stats.maxWait} menit`}
+            title={t("reports:waitingTime.kpi.longestWait")}
+            value={formatWaitingTime(stats.maxWait)}
             icon={Hourglass}
             color="red"
           />
           <KPICard
-            title="Waktu Tercepat"
-            value={`${stats.minWait} menit`}
+            title={t("reports:waitingTime.kpi.fastestWait")}
+            value={formatWaitingTime(stats.minWait)}
             icon={TrendingDown}
             color="green"
           />
           <KPICard
-            title="Poli Tercepat"
+            title={t("reports:waitingTime.kpi.fastestPoly")}
             value={stats.bestPoly.poly}
             subtitle={formatWaitingTime(stats.bestPoly.average_waiting_time_minutes, true)}
             icon={Building}
@@ -1041,13 +1124,13 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-purple-600" />
-                Laporan Waktu Tunggu
+                {t("reports:waitingTime.title")}
               </CardTitle>
-              <CardDescription>Statistik waktu tunggu per poli</CardDescription>
+              <CardDescription>{t("reports:waitingTime.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -1055,58 +1138,26 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={Clock}
-              title="Tidak ada data waktu tunggu"
-              description="Coba perluas rentang tanggal untuk melihat statistik waktu tunggu."
+              title={t("reports:waitingTime.emptyTitle")}
+              description={t("reports:waitingTime.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Poli</TableHead>
-                    <TableHead className="text-right">Rata-rata</TableHead>
-                    <TableHead className="text-right">Terlama</TableHead>
-                    <TableHead className="text-right">Tercepat</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => (
-                    <TableRow key={i} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{item.date}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.poly}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-medium text-purple-600">
-                          {formatWaitingTime(item.average_waiting_time_minutes, true)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={item.longest_waiting_time_minutes && item.longest_waiting_time_minutes > 30 ? "text-red-600" : ""}>
-                          {formatWaitingTime(item.longest_waiting_time_minutes)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-green-600">
-                          {formatWaitingTime(item.fastest_waiting_time_minutes)}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.poly}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:waitingTime.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}
@@ -1115,15 +1166,18 @@ function WaitingTimeReportSection({ params, page, perPage, setPage, setPerPage }
 }
 
 function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
+  const { t } = useTranslation(["reports"])
+  void page
+  void perPage
   const { data, isLoading } = useBusyHourReport(params)
   const exportMutation = useExportBusyHour()
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
@@ -1157,6 +1211,79 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
     return { totalReservations, avgPerDay: Math.round(avgPerDay), busiest, peakHour, maxHourlyCount, allHours }
   }, [data])
 
+  const columns: DataTableColumn<BusyHourReportItem>[] = [
+    { id: "date", header: t("reports:busyHour.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "poly", header: t("reports:busyHour.columns.poly"), cell: (item) => <Badge variant="outline">{item.poly}</Badge>, widthClassName: "w-36" },
+    {
+      id: "total_reservations",
+      header: t("reports:busyHour.columns.total"),
+      align: "right",
+      widthClassName: "w-24",
+      cell: (item) => <span className="font-medium">{item.total_reservations}</span>,
+    },
+    {
+      id: "peak_hour",
+      header: t("reports:busyHour.columns.peakHour"),
+      widthClassName: "w-32",
+      cell: (item) => {
+        const hourlyData = stats?.allHours.map((hour) => ({ hour, count: Number(item[hour] || 0) })) || []
+        const peak = hourlyData.reduce((max, current) => (current.count > max.count ? current : max), { hour: "-", count: 0 })
+
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-amber-700">{peak.hour}</span>
+            <span className="text-xs text-muted-foreground">{t("reports:format.patientCount", { count: peak.count })}</span>
+          </div>
+        )
+      },
+    },
+    {
+      id: "distribution",
+      header: t("reports:busyHour.columns.hourlyDistribution"),
+      widthClassName: "min-w-[340px]",
+      cell: (item) => {
+        const hourlyData = stats?.allHours.map((hour) => ({ hour, count: Number(item[hour] || 0) })) || []
+        const peak = hourlyData.reduce((max, current) => (current.count > max.count ? current : max), { hour: "-", count: 0 })
+        const maxCount = Math.max(...hourlyData.map((entry) => entry.count), 1)
+
+        return (
+          <div>
+            <div className="flex h-12 items-end gap-1 py-1">
+              {hourlyData.map((entry) => {
+                const heightPercent = (entry.count / maxCount) * 100
+                const isPeak = entry.hour === peak.hour && entry.count > 0
+
+                return (
+                  <div
+                    key={entry.hour}
+                    className="group relative flex h-full flex-col items-center justify-end gap-0.5"
+                    style={{ width: `${100 / Math.max(hourlyData.length, 1)}%` }}
+                  >
+                    <div className="absolute bottom-full z-10 mb-1 hidden flex-col items-center whitespace-nowrap rounded border bg-popover px-1.5 py-0.5 text-[10px] text-popover-foreground shadow-sm group-hover:flex">
+                      <span className="font-semibold">{entry.hour}</span>
+                      <span>{t("reports:format.patientShort", { count: entry.count })}</span>
+                    </div>
+                    <div
+                      className={cn(
+                        "w-full rounded-t-sm transition-all",
+                        isPeak ? "bg-amber-500" : "bg-muted-foreground/30 hover:bg-amber-400",
+                      )}
+                      style={{ height: `${Math.max(heightPercent, 10)}%` }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-1 flex justify-between px-1 text-[10px] text-muted-foreground">
+              <span>{hourlyData[0]?.hour}</span>
+              <span>{hourlyData[hourlyData.length - 1]?.hour}</span>
+            </div>
+          </div>
+        )
+      },
+    },
+  ]
+
   if (isLoading) return <ReportSkeleton />
 
   return (
@@ -1165,26 +1292,26 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KPICard
-            title="Total Reservasi"
+            title={t("reports:busyHour.kpi.totalReservations")}
             value={stats.totalReservations}
             icon={Users}
             color="amber"
           />
           <KPICard
-            title="Rata-rata/Hari"
+            title={t("reports:busyHour.kpi.averagePerDay")}
             value={stats.avgPerDay}
             icon={BarChart3}
             color="blue"
           />
           <KPICard
-            title="Jam Tersibuk"
+            title={t("reports:busyHour.kpi.busiestHour")}
             value={stats.peakHour}
-            subtitle={`${stats.maxHourlyCount} pasien`}
+            subtitle={t("reports:format.patientCount", { count: stats.maxHourlyCount })}
             icon={Clock}
             color="orange"
           />
           <KPICard
-            title="Poli Tersibuk"
+            title={t("reports:busyHour.kpi.busiestPoly")}
             value={stats.busiest.poly}
             icon={Building}
             color="purple"
@@ -1198,13 +1325,13 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-amber-600" />
-                Laporan Jam Sibuk
+                {t("reports:busyHour.title")}
               </CardTitle>
-              <CardDescription>Distribusi reservasi per jam</CardDescription>
+              <CardDescription>{t("reports:busyHour.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -1212,90 +1339,26 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={Activity}
-              title="Tidak ada data jam sibuk"
-              description="Coba perluas rentang tanggal untuk melihat distribusi jam sibuk."
+              title={t("reports:busyHour.emptyTitle")}
+              description={t("reports:busyHour.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Poli</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Jam Puncak</TableHead>
-                    <TableHead className="w-[40%]">Distribusi per Jam</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => {
-                    const hourlyData = stats?.allHours.map(h => ({ hour: h, count: Number(item[h] || 0) })) || []
-                    const peak = hourlyData.reduce((max, curr) => curr.count > max.count ? curr : max, { hour: "-", count: 0 })
-                    const maxCount = Math.max(...hourlyData.map(d => d.count), 1) // Avoid div by 0
-
-                    return (
-                      <TableRow key={i} className="hover:bg-muted/30">
-                        <TableCell className="font-medium">{item.date}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{item.poly}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">{item.total_reservations}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-amber-700">{peak.hour}</span>
-                            <span className="text-xs text-muted-foreground">{peak.count} pasien</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-end gap-1 h-12 py-1">
-                            {hourlyData.map((d) => {
-                              const heightPercent = (d.count / maxCount) * 100
-                              const isPeak = d.hour === peak.hour && d.count > 0
-                              return (
-                                <div 
-                                  key={d.hour} 
-                                  className="flex flex-col items-center justify-end h-full gap-0.5 group relative"
-                                  style={{ width: `${100 / Math.max(hourlyData.length, 1)}%` }}
-                                >
-                                  {/* Tooltip */}
-                                  <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col items-center bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap z-10">
-                                    <span className="font-semibold">{d.hour}</span>
-                                    <span>{d.count} psn</span>
-                                  </div>
-                                  
-                                  {/* Bar */}
-                                  <div 
-                                    className={cn(
-                                      "w-full rounded-t-sm transition-all",
-                                      isPeak ? "bg-amber-500" : "bg-muted-foreground/30 hover:bg-amber-400"
-                                    )}
-                                    style={{ height: `${Math.max(heightPercent, 10)}%` }} // min height for visibility
-                                  />
-                                </div>
-                              )
-                            })}
-                          </div>
-                          <div className="flex justify-between text-[10px] text-muted-foreground mt-1 px-1">
-                            <span>{hourlyData[0]?.hour}</span>
-                            <span>{hourlyData[hourlyData.length - 1]?.hour}</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.poly}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:busyHour.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}
@@ -1304,15 +1367,26 @@ function BusyHourReportSection({ params, page, perPage, setPage, setPerPage }: {
 }
 
 function UserActivityReportSection({ params, page, perPage, setPage, setPerPage }: { params: ReportParams; page: number; perPage: number; setPage: (page: number) => void; setPerPage: (perPage: number) => void }) {
+  const { t } = useTranslation(["reports"])
+  void page
+  void perPage
   const { data, isLoading } = useUserActivityReport(params)
   const exportMutation = useExportUserActivity()
+
+  const columns: DataTableColumn<UserActivityReportItem>[] = [
+    { id: "date", header: t("reports:userActivity.columns.date"), cell: (item) => <span className="font-medium">{item.date}</span>, widthClassName: "w-36" },
+    { id: "user", header: t("reports:userActivity.columns.user"), cell: (item) => item.user, widthClassName: "min-w-[180px]" },
+    { id: "role", header: t("reports:userActivity.columns.role"), cell: (item) => <Badge variant="outline">{item.role}</Badge>, widthClassName: "w-32" },
+    { id: "activity", header: t("reports:userActivity.columns.activity"), cell: (item) => item.activity, widthClassName: "min-w-[220px]" },
+    { id: "reservation_id", header: t("reports:userActivity.columns.reservationId"), cell: (item) => item.reservation_id, widthClassName: "w-32", align: "right" },
+  ]
 
   const handleExport = async () => {
     try {
       await exportMutation.mutateAsync(params)
-      toast.success("Laporan berhasil diunduh")
+      toast.success(t("reports:toasts.exportSuccess"))
     } catch {
-      toast.error("Gagal mengunduh laporan")
+      toast.error(t("reports:toasts.exportFailed"))
     }
   }
 
@@ -1326,13 +1400,13 @@ function UserActivityReportSection({ params, page, perPage, setPage, setPerPage 
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-slate-700" />
-                Laporan Aktivitas User
+                {t("reports:userActivity.title")}
               </CardTitle>
-              <CardDescription>Aktivitas user berdasarkan filter</CardDescription>
+              <CardDescription>{t("reports:userActivity.description")}</CardDescription>
             </div>
             <Button onClick={handleExport} disabled={exportMutation.isPending} variant="outline" className="shrink-0">
               {exportMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              Export Excel
+              {t("reports:actions.exportExcel")}
             </Button>
           </div>
         </CardHeader>
@@ -1340,46 +1414,26 @@ function UserActivityReportSection({ params, page, perPage, setPage, setPerPage 
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
               icon={Users}
-              title="Tidak ada aktivitas"
-              description="Coba ubah filter atau rentang tanggal untuk melihat aktivitas user."
+              title={t("reports:userActivity.emptyTitle")}
+              description={t("reports:userActivity.emptyDescription")}
             />
           ) : (
-            <Table variant="report">
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Aktivitas</TableHead>
-                    <TableHead>ID Reservasi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((item, i) => (
-                    <TableRow key={i} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{item.date}</TableCell>
-                      <TableCell>{item.user}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.role}</Badge>
-                      </TableCell>
-                      <TableCell>{item.activity}</TableCell>
-                      <TableCell>{item.reservation_id}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              rows={data.data}
+              rowKey={(row, idx) => `${row.date}-${row.user}-${idx}`}
+              variant="report"
+              emptyMessage={t("reports:userActivity.emptyMessage")}
+            />
           )}
         </CardContent>
       </Card>
 
       {data?.pagination && data.pagination.total > 0 && (
-        <PaginationControls
-          currentPage={page}
-          totalPages={data.pagination.last_page}
+        <DataTablePagination
+          meta={toDataTablePaginationMeta(data.pagination)}
           onPageChange={setPage}
-          perPage={perPage}
           onPerPageChange={setPerPage}
-          totalItems={data.pagination.total}
           isPending={isLoading}
         />
       )}

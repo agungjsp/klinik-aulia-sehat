@@ -1,0 +1,75 @@
+const nurseQueueEn = {
+  nurse: {
+    headerTitle: "Anamnesis Queue",
+    sections: {
+      inAnamnesis: "In Anamnesis",
+      waitingAnamnesis: "Waiting for Anamnesis",
+      patientCount: "{{count}} patients",
+      noPatient: "No patients",
+      noWaitingPatient: "No waiting patients",
+      finishedAt: "Registered: {{time}}",
+    },
+    actions: {
+      callPatient: "Call",
+      finish: "Finish",
+      waitUntilDone: "Wait until current patient is finished",
+      queueOrder: "Queue #{{order}}",
+    },
+    confirmations: {
+      callTitle: "Call Patient",
+      callDescription: "Call {{name}} to anamnesis room?",
+      finishTitle: "Finish Anamnesis",
+      finishDescription: "Finish anamnesis for {{name}} and send to doctor queue?",
+    },
+    toasts: {
+      reservationDataUnavailable: "Reservation data is unavailable.",
+      autoNoShow: "Patient is absent after 3 calls, status changed to NO SHOW",
+      calledForAnamnesis: "Patient called for anamnesis",
+      movedToDoctorQueue: "Anamnesis completed, patient is waiting for doctor",
+    },
+  },
+  nurseAssistant: {
+    headerTitle: "Call Patient to Doctor",
+    sections: {
+      withDoctor: "With Doctor",
+      waitingForDoctorCall: "Waiting to be Called by Doctor",
+      patientCount: "{{count}} patients",
+      noPatient: "No patients",
+      noWaitingPatient: "No waiting patients",
+    },
+    actions: {
+      noShow: "No Show",
+      recall: "Recall",
+      call: "Call",
+      withDoctor: "With Doctor",
+      waitUntilDone: "Wait until current patient is finished",
+      queueOrder: "Queue #{{order}}",
+      callCount: "Calls: {{count}}/3",
+      continue: "Continue",
+      markNoShow: "Mark No Show",
+    },
+    confirmations: {
+      markNoShowTitle: "Mark No Show",
+      markNoShowDescription: "Mark {{name}} as no show?",
+      recallTitle: "Recall Patient",
+      recallDescription: "Continue calling {{name}}?",
+      callTitle: "Call Patient",
+      callDescription: "Call {{name}} to doctor room?",
+      noShowImpact1: "Patient status will be changed to NO SHOW.",
+      noShowImpact2: "Queue data is updated in realtime for related teams.",
+      callImpact1: "Patient is moved to the next consultation stage.",
+      callImpact2: "Call count history will be updated.",
+      noShowRecoveryHint: "Use only if the patient is truly absent.",
+      callRecoveryHint: "Make sure patient is ready before continuing.",
+    },
+    toasts: {
+      reservationDataUnavailable: "Reservation data is unavailable.",
+      autoNoShow: "{{name}} is absent after 3 calls, status changed to NO SHOW",
+      calledPatient: "Calling {{name}}",
+      recallCount: "Call #{{count}} for {{name}}",
+      markedNoShow: "Patient marked as no show",
+    },
+  },
+} as const
+
+export default nurseQueueEn

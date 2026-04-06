@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { messageTemplateService, type MessageTemplateListParams } from "@/services/message-template"
+import { normalizePaginatedResponse } from "@/services/adapters/pagination"
 import type { MessageTemplateRequest } from "@/types"
 
 export const messageTemplateKeys = {
@@ -12,6 +13,7 @@ export function useMessageTemplateList(params?: MessageTemplateListParams) {
   return useQuery({
     queryKey: messageTemplateKeys.list(params),
     queryFn: () => messageTemplateService.getAll(params),
+    select: (response) => normalizePaginatedResponse(response),
   })
 }
 

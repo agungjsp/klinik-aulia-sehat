@@ -1,17 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { patientService, type PatientCreateRequest, type PatientSearchParams, type PatientUpdateRequest } from "@/services/patient"
+import { normalizePaginatedResponse } from "@/services/adapters/pagination"
+import type { TableQueryParams } from "@/services/types/query"
+
+type PatientListQueryParams = PatientSearchParams & TableQueryParams
 
 export const patientKeys = {
   all: ["patient"] as const,
-  list: (params?: PatientSearchParams) => [...patientKeys.all, "list", params] as const,
+  list: (params?: PatientListQueryParams) => [...patientKeys.all, "list", params] as const,
   detail: (id: number) => [...patientKeys.all, "detail", id] as const,
   nik: (nik: string) => [...patientKeys.all, "nik", nik] as const,
 }
 
-export function usePatientList(params?: PatientSearchParams) {
+export function usePatientList(params?: PatientListQueryParams) {
   return useQuery({
     queryKey: patientKeys.list(params),
     queryFn: () => patientService.getAll(params),
+    select: (response) => normalizePaginatedResponse(response),
   })
 }
 

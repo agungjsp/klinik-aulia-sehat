@@ -1,12 +1,13 @@
 import { useEffect } from "react"
 import { format } from "date-fns"
-import { id as localeId } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 import { RefreshCw, CalendarDays, Users, Clock, Activity, CheckCircle, XCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
+import { getLocaleByLanguage } from "@/lib/i18n/date-locale"
 import { usePolyList, useScheduleList, useCurrentQueue, useStatusList } from "@/hooks"
 import { useAntreanSummary } from "@/hooks/use-antrean-summary"
 import { QUEUE_STATUS_CONFIG } from "@/lib/queue-status"
@@ -36,6 +37,8 @@ export function AntreanHeader({
   onRefresh,
   showPolySelector = true,
 }: AntreanHeaderProps) {
+  const { t, i18n } = useTranslation(["common", "queue"])
+  const { dateFnsLocale } = getLocaleByLanguage(i18n.language)
   const { data: polyData, isLoading: polyLoading } = usePolyList()
   const { data: scheduleData, isLoading: scheduleLoading } = useScheduleList({
     month: new Date(date).getMonth() + 1,
@@ -89,7 +92,7 @@ export function AntreanHeader({
             <h1 className="text-2xl font-bold">{title}</h1>
             <p className="text-muted-foreground flex items-center gap-2">
               <CalendarDays className="h-4 w-4" />
-              {format(new Date(date), "EEEE, d MMMM yyyy", { locale: localeId })}
+              {format(new Date(date), "EEEE, d MMMM yyyy", { locale: dateFnsLocale })}
             </p>
           </div>
         </div>
@@ -103,7 +106,7 @@ export function AntreanHeader({
                 {polyLoading ? (
                   <Skeleton className="h-4 w-20" />
                 ) : (
-                  <SelectValue placeholder="Pilih Poli" />
+                  <SelectValue placeholder={t("common:labels.poly")} />
                 )}
               </SelectTrigger>
               <SelectContent>
@@ -134,48 +137,48 @@ export function AntreanHeader({
             <CardContent className="p-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-muted-foreground">Jadwal Dokter</h3>
+                  <h3 className="font-semibold text-sm text-muted-foreground">{t("nav:items.doctorSchedule")}</h3>
                 </div>
                 {scheduleLoading ? (
                   <Skeleton className="h-16 w-full" />
                 ) : availableSchedules.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada jadwal tersedia</p>
+                  <p className="text-sm text-muted-foreground">{t("common:states.noData")}</p>
                 ) : (
                   <div className="space-y-2">
                     {availableSchedules.length > 1 && onScheduleChange ? (
                       <Select
                         value={selectedScheduleId ? String(selectedScheduleId) : undefined}
                         onValueChange={(v) => onScheduleChange(Number(v))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih Jadwal" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableSchedules.map((schedule) => (
-                            <SelectItem key={schedule.id} value={String(schedule.id)}>
-                              {schedule.doctor?.name || "Dokter"} - {schedule.start_time.slice(0, 5)} -{" "}
-                              {schedule.end_time.slice(0, 5)}
-                            </SelectItem>
-                          ))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("nav:items.doctorSchedule")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableSchedules.map((schedule) => (
+                              <SelectItem key={schedule.id} value={String(schedule.id)}>
+                                {schedule.doctor?.name || t("common:labels.name")} - {schedule.start_time.slice(0, 5)} -{" "}
+                                {schedule.end_time.slice(0, 5)}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     ) : selectedSchedule || (availableSchedules.length === 1 && availableSchedules[0]) ? (
                       <div>
                         <p className="font-medium">
-                          {(selectedSchedule || availableSchedules[0])?.doctor?.name || "Dokter"}
+                          {(selectedSchedule || availableSchedules[0])?.doctor?.name || t("common:labels.name")}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {(selectedSchedule || availableSchedules[0])?.start_time.slice(0, 5)} - {(selectedSchedule || availableSchedules[0])?.end_time.slice(0, 5)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Pilih jadwal</p>
+                      <p className="text-sm text-muted-foreground">{t("nav:items.doctorSchedule")}</p>
                     )}
                     {quotaInfo && (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Kuota:</span>
+                        <span className="text-muted-foreground">{t("common:labels.total")}:</span>
                         <span className={cn("font-medium", quotaInfo.isFull && "text-destructive")}>
-                          {quotaInfo.used}/{quotaInfo.quota} ({quotaInfo.remaining} tersisa)
+                          {quotaInfo.used}/{quotaInfo.quota} ({quotaInfo.remaining} {t("common:labels.waiting")})
                         </span>
                         {quotaInfo.isFull && (
                           <AlertCircle className="h-4 w-4 text-destructive" />
@@ -192,10 +195,10 @@ export function AntreanHeader({
           <Card>
             <CardContent className="p-4">
               <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-muted-foreground">Nomor Terpanggil</h3>
+                <h3 className="font-semibold text-sm text-muted-foreground">{t("common:labels.queueNumber")}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Anamnesa</p>
+                    <p className="text-xs text-muted-foreground">{t("queue:status.ANAMNESA")}</p>
                     <p className="text-2xl font-bold">
                       {currentQueueData?.queue_number_anamnesa
                         ? formatQueueNumber(currentQueueData.queue_number_anamnesa)
@@ -203,7 +206,7 @@ export function AntreanHeader({
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Dengan Dokter</p>
+                    <p className="text-xs text-muted-foreground">{t("queue:status.WITH_DOCTOR")}</p>
                     <p className="text-2xl font-bold">
                       {currentQueueData?.queue_number_with_doctor
                         ? formatQueueNumber(currentQueueData.queue_number_with_doctor)
@@ -221,6 +224,7 @@ export function AntreanHeader({
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {statusCounts.map(({ statusName, count, label }) => {
           const config = QUEUE_STATUS_CONFIG[statusName]
+          const statusLabel = t(config.translationKey, { defaultValue: label })
           const iconMap = {
             WAITING: Clock,
             ANAMNESA: Activity,
@@ -238,7 +242,7 @@ export function AntreanHeader({
                 <div className="flex items-center justify-between mb-2">
                   <Icon className={cn("h-4 w-4", config?.color || "text-muted-foreground")} />
                 </div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{statusLabel}</p>
                 <p className="text-2xl font-bold">{count}</p>
               </CardContent>
             </Card>

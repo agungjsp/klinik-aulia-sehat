@@ -1,4 +1,5 @@
 import { Link, useRouter, useLocation } from "@tanstack/react-router"
+import { useTranslation } from "react-i18next"
 import {
   Home,
   LogOut,
@@ -47,12 +48,12 @@ import {
 interface MenuItem {
   to: string
   icon: LucideIcon
-  label: string
+  labelKey: string
   roles?: RoleName[]
 }
 
 interface MenuSection {
-  title?: string
+  titleKey?: string
   items: MenuItem[]
   roles?: RoleName[]
 }
@@ -60,81 +61,82 @@ interface MenuSection {
 const menuConfig: MenuSection[] = [
   {
     items: [
-      { to: "/", icon: Home, label: "Dashboard" },
+      { to: "/", icon: Home, labelKey: "nav:items.dashboard" },
     ],
   },
   {
-    title: "Layanan Hari Ini",
+    titleKey: "nav:sections.todayServices",
     items: [
       { 
         to: "/administrasi/antrean", 
         icon: ClipboardList, 
-        label: "Pendaftaran & Antrean", 
+        labelKey: "nav:items.registrationQueue",
         roles: [ROLES.SUPERADMIN, ROLES.ADMINISTRASI] 
       },
       { 
         to: "/perawat/antrean", 
         icon: Activity, 
-        label: "Antrean Anamnesa", 
+        labelKey: "nav:items.anamnesisQueue",
         roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ANAMNESA] 
       },
       { 
         to: "/perawat-asisten/antrean", 
         icon: UserPlus, 
-        label: "Panggil Pasien", 
+        labelKey: "nav:items.callPatient",
         roles: [ROLES.SUPERADMIN, ROLES.PERAWAT_ASISTEN] 
       },
       { 
         to: "/dokter/antrean", 
         icon: Stethoscope, 
-        label: "Antrean Pasien", 
+        labelKey: "nav:items.patientQueue",
         roles: [ROLES.SUPERADMIN, ROLES.DOKTER] 
       },
       { 
         to: "/jadwal", 
         icon: Calendar, 
-        label: "Jadwal Dokter", 
+        labelKey: "nav:items.doctorSchedule",
         roles: [ROLES.SUPERADMIN, ROLES.ADMINISTRASI, ROLES.KEPALA_KLINIK] 
       },
       { 
         to: "/pengaturan/jadwal-kontrol", 
         icon: CalendarClock, 
-        label: "Jadwal Kontrol", 
+        labelKey: "nav:items.checkupSchedule",
         roles: [ROLES.SUPERADMIN, ROLES.DOKTER, ROLES.PERAWAT_ANAMNESA, ROLES.PERAWAT_ASISTEN] 
       },
     ],
   },
   {
-    title: "Laporan & Analytics",
+    titleKey: "nav:sections.reports",
     roles: [ROLES.SUPERADMIN, ROLES.KEPALA_KLINIK],
     items: [
-      { to: "/laporan", icon: BarChart3, label: "Ringkasan Laporan" },
+      { to: "/laporan", icon: BarChart3, labelKey: "nav:items.reportSummary" },
     ],
   },
   {
-    title: "Manajemen Klinik",
+    titleKey: "nav:sections.clinicManagement",
     roles: [ROLES.SUPERADMIN],
     items: [
-      { to: "/master/pasien", icon: Users, label: "Data Pasien" },
-      { to: "/master/poli", icon: Building2, label: "Poliklinik" },
-      { to: "/master/users", icon: UserCog, label: "Manajemen User" },
-      { to: "/master/roles", icon: Shield, label: "Akses & Roles" },
+      { to: "/master/pasien", icon: Users, labelKey: "nav:items.patientData" },
+      { to: "/master/poli", icon: Building2, labelKey: "nav:items.polyclinic" },
+      { to: "/master/users", icon: UserCog, labelKey: "nav:items.userManagement" },
+      { to: "/master/roles", icon: Shield, labelKey: "nav:items.accessRoles" },
     ],
   },
   {
-    title: "Pengaturan Sistem",
+    titleKey: "nav:sections.systemSettings",
     roles: [ROLES.SUPERADMIN],
     items: [
-      { to: "/pengaturan/template-pesan", icon: MessageSquare, label: "Template Pesan" },
-      { to: "/pengaturan/konfigurasi-pengingat", icon: Bell, label: "Pengingat" },
-      { to: "/pengaturan/konfigurasi-whatsapp", icon: Smartphone, label: "WhatsApp" },
-      { to: "/pengaturan/konfigurasi-sistem", icon: Settings, label: "Konfigurasi Umum" },
-      { to: "/pengaturan/faq", icon: HelpCircle, label: "Bantuan & FAQ" },
+      { to: "/pengaturan/template-pesan", icon: MessageSquare, labelKey: "nav:items.messageTemplate" },
+      { to: "/pengaturan/konfigurasi-pengingat", icon: Bell, labelKey: "nav:items.reminders" },
+      { to: "/pengaturan/konfigurasi-whatsapp", icon: Smartphone, labelKey: "nav:items.whatsapp" },
+      { to: "/pengaturan/konfigurasi-sistem", icon: Settings, labelKey: "nav:items.generalConfig" },
+      { to: "/pengaturan/faq", icon: HelpCircle, labelKey: "nav:items.helpFaq" },
     ],
   },
 ]
 
 export function AppSidebar() {
+  const { t } = useTranslation(["nav"])
   const router = useRouter()
   const location = useLocation()
   const pathname = location.pathname
@@ -169,8 +171,8 @@ export function AppSidebar() {
             <Activity className="size-4" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="truncate font-semibold">Klinik Aulia Sehat</span>
-            <span className="truncate text-xs">Sistem Informasi</span>
+            <span className="truncate font-semibold">{t("common:appName")}</span>
+            <span className="truncate text-xs">{t("nav:brand.subtitle")}</span>
           </div>
         </div>
       </SidebarHeader>
@@ -182,8 +184,8 @@ export function AppSidebar() {
 
           return (
             <SidebarGroup key={idx}>
-              {section.title && (
-                <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+              {section.titleKey && (
+                <SidebarGroupLabel>{t(section.titleKey)}</SidebarGroupLabel>
               )}
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -194,10 +196,10 @@ export function AppSidebar() {
                     
                     return (
                       <SidebarMenuItem key={item.to}>
-                        <SidebarMenuButton asChild tooltip={item.label} isActive={isActive}>
+                        <SidebarMenuButton asChild tooltip={t(item.labelKey)} isActive={isActive}>
                           <Link to={item.to}>
                             <item.icon />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -223,7 +225,7 @@ export function AppSidebar() {
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="truncate font-semibold">{user?.name}</span>
-                    <span className="truncate text-xs">{primaryRole ?? "User"}</span>
+                    <span className="truncate text-xs">{primaryRole ?? t("nav:footer.userFallback")}</span>
                   </div>
                   <ChevronDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
@@ -236,7 +238,7 @@ export function AppSidebar() {
               >
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Logout
+                  {t("nav:footer.logout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
